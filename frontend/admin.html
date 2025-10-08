@@ -12,7 +12,6 @@
       background-color: #F7F9FC;
     }
 
-    /* Styling for the active navigation link */
     .active-link {
       background-color: #3730A3;
       /* Indigo-800 Darker for hover/active */
@@ -20,10 +19,14 @@
       font-weight: 600;
     }
 
-    /* Ensure main content starts after the sidebar width */
     .main-content {
       margin-left: 16rem;
       /* Tailwind w-64 */
+    }
+
+    /* Modal specific styles */
+    .modal-overlay {
+      background-color: rgba(0, 0, 0, 0.75);
     }
   </style>
 </head>
@@ -91,7 +94,7 @@
         <section id="view-staff-management" class="management-view">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-2xl font-semibold text-gray-700">All Staff Accounts</h2>
-            <button id="add-staff-btn"
+            <button onclick="handleAdd('staff')"
               class="py-2 px-4 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition">
               + Add New Staff
             </button>
@@ -125,7 +128,7 @@
         <section id="view-room-type-config" class="management-view hidden">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-2xl font-semibold text-gray-700">Room Type Configuration</h2>
-            <button id="add-room-type-btn"
+            <button onclick="handleAdd('room-types')"
               class="py-2 px-4 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition">
               + Add New Type
             </button>
@@ -139,7 +142,7 @@
         <section id="view-room-inventory" class="management-view hidden">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-2xl font-semibold text-gray-700">Physical Room Inventory</h2>
-            <button id="add-room-btn"
+            <button onclick="handleAdd('rooms')"
               class="py-2 px-4 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition">
               + Add New Room
             </button>
@@ -173,7 +176,7 @@
         <section id="view-services-catalog" class="management-view hidden">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-2xl font-semibold text-gray-700">Services Catalog Management</h2>
-            <button id="add-service-btn"
+            <button onclick="handleAdd('services')"
               class="py-2 px-4 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition">
               + Add New Service
             </button>
@@ -212,6 +215,33 @@
     </main>
   </div>
 
+  <div id="crud-modal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center transition-opacity modal-overlay">
+    <div class="bg-white p-8 rounded-xl shadow-3xl max-w-lg w-full transform transition-all duration-300">
+      <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Add New Record</h3>
+
+      <form id="crud-form">
+        <input type="hidden" id="form-entity-type" name="entityType">
+        <input type="hidden" id="form-record-id" name="recordID">
+
+        <div id="form-fields-container" class="space-y-4 mb-6">
+        </div>
+
+        <div class="flex justify-end space-x-3">
+          <button type="button" onclick="closeModal()"
+            class="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition">
+            Cancel
+          </button>
+          <button type="submit" id="modal-submit-btn"
+            class="py-2 px-4 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition">
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
   <script>
     const BASE_URL = 'http://127.0.0.1:5000/api';
     const HEADERS = { 'Content-Type': 'application/json' };
@@ -219,8 +249,62 @@
     const navLinks = document.querySelectorAll('.nav-link');
     const mainTitle = document.getElementById('main-title');
     const statusMessage = document.getElementById('status-message');
+    const crudModal = document.getElementById('crud-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const formFieldsContainer = document.getElementById('form-fields-container');
+    const crudForm = document.getElementById('crud-form');
+    const modalSubmitBtn = document.getElementById('modal-submit-btn');
 
-    /** Navigation and View Switching */
+    // --- Configuration for Dynamic Form Fields ---
+    const ENTITY_CONFIG = {
+      'staff': {
+        idKey: 'staffID',
+        title: 'Staff Member',
+        fields: [
+          { name: 'firstName', label: 'First Name', type: 'text', required: true },
+          { name: 'lastName', label: 'Last Name', type: 'text', required: true },
+          { name: 'email', label: 'Email', type: 'email', required: true },
+          { name: 'username', label: 'Username', type: 'text', required: true },
+          { name: 'role', label: 'Role', type: 'select', options: ['Admin', 'Manager', 'Receptionist', 'Housekeeping'], required: true },
+          { name: 'password', label: 'Password (Leave blank unless changing)', type: 'password', required: false, forEdit: false },
+          { name: 'phoneNumber', label: 'Phone Number', type: 'text', required: false },
+          { name: 'address', label: 'Address', type: 'text', required: false },
+          { name: 'dateOfHire', label: 'Date of Hire', type: 'date', required: false },
+          { name: 'salary', label: 'Salary', type: 'number', step: '0.01', required: false },
+        ]
+      },
+      'room-types': {
+        idKey: 'roomTypeID',
+        title: 'Room Type',
+        fields: [
+          { name: 'typeName', label: 'Type Name (e.g., Suite)', type: 'text', required: true },
+          { name: 'description', label: 'Description', type: 'textarea', required: true },
+          { name: 'basePrice', label: 'Base Price', type: 'number', step: '0.01', required: true },
+          { name: 'capacity', label: 'Capacity', type: 'number', required: true },
+        ]
+      },
+      'rooms': {
+        idKey: 'roomNumber',
+        title: 'Room Inventory',
+        fields: [
+          { name: 'roomNumber', label: 'Room Number (e.g. 101)', type: 'text', required: true, forEdit: false },
+          { name: 'roomTypeID', label: 'Room Type ID', type: 'number', required: true },
+          { name: 'floorNumber', label: 'Floor Number', type: 'number', required: true },
+          { name: 'currentStatus', label: 'Status', type: 'select', options: ['Available', 'Occupied', 'Maintenance'], required: true },
+        ]
+      },
+      'services': {
+        idKey: 'serviceID',
+        title: 'Service Catalog Item',
+        fields: [
+          { name: 'serviceName', label: 'Service Name', type: 'text', required: true },
+          { name: 'description', label: 'Description', type: 'textarea', required: false },
+          { name: 'unitPrice', label: 'Unit Price', type: 'number', step: '0.01', required: true },
+        ]
+      }
+    };
+
+    /** Navigation and View Switching (Same as before) */
     function showView(viewId) {
       views.forEach(view => {
         view.classList.add('hidden');
@@ -228,17 +312,20 @@
       const activeView = document.getElementById(`view-${viewId}`);
       if (activeView) {
         activeView.classList.remove('hidden');
-        mainTitle.textContent = activeView.querySelector('h2') ? activeView.querySelector('h2').textContent : viewId.replace(/-/g, ' ').toUpperCase();
-        // Load data specific to the view
+        const sectionTitle = activeView.querySelector('h2') ? activeView.querySelector('h2').textContent : viewId.replace(/-/g, ' ').toUpperCase();
+        mainTitle.textContent = sectionTitle;
+
         if (viewId === 'staff-management') loadStaff();
         if (viewId === 'room-type-config') loadRoomTypes();
         if (viewId === 'room-inventory') loadRooms();
         if (viewId === 'services-catalog') loadServices();
       }
 
-      // Update active link class
       navLinks.forEach(link => link.classList.remove('active-link'));
-      document.querySelector(`[data-view="${viewId}"]`).classList.add('active-link');
+      const currentLink = document.querySelector(`[data-view="${viewId}"]`);
+      if (currentLink) {
+        currentLink.classList.add('active-link');
+      }
     }
 
     navLinks.forEach(link => {
@@ -248,7 +335,7 @@
       });
     });
 
-    /** Message Handling */
+    /** Message Handling (Same as before) */
     function showStatus(message, isSuccess = true) {
       statusMessage.textContent = message;
       statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
@@ -257,17 +344,210 @@
       } else {
         statusMessage.classList.add('bg-red-100', 'text-red-800');
       }
-      // Auto hide after 5 seconds
       setTimeout(() => {
         statusMessage.classList.add('hidden');
       }, 5000);
     }
 
-    /** --- 4. Staff Management Logic --- */
+    // --- Modal Control ---
+    function openModal() {
+      crudModal.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function closeModal() {
+      crudModal.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+      crudForm.reset();
+    }
+
+    // --- Form Building Functions ---
+
+    function createInputField(field, value, isEdit) {
+      const requiredAttr = field.required ? 'required' : '';
+      const type = field.type;
+      const step = field.step ? `step="${field.step}"` : '';
+
+      let inputHtml;
+      if (type === 'select') {
+        const optionsHtml = field.options.map(opt =>
+          `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`
+        ).join('');
+        inputHtml = `<select id="${field.name}" name="${field.name}" ${requiredAttr} class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">${optionsHtml}</select>`;
+      } else if (type === 'textarea') {
+        inputHtml = `<textarea id="${field.name}" name="${field.name}" ${requiredAttr} class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">${value || ''}</textarea>`;
+      } else {
+        // Handle text, number, email, date, password
+        const valueAttr = value !== undefined ? `value="${value}"` : '';
+        const readonlyAttr = (isEdit && field.name === 'roomNumber') ? 'readonly' : ''; // Only rooms.roomNumber is immutable
+
+        // Hide password field for staff edit unless it's a new entry
+        if (isEdit && field.name === 'password') return '';
+
+        inputHtml = `<input type="${type}" id="${field.name}" name="${field.name}" ${valueAttr} ${requiredAttr} ${step} ${readonlyAttr}
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${readonlyAttr ? 'bg-gray-100' : ''}">`;
+      }
+
+      return `
+                <div>
+                    <label for="${field.name}" class="block text-sm font-medium text-gray-700 mb-1">
+                        ${field.label} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                    </label>
+                    ${inputHtml}
+                </div>
+            `;
+    }
+
+    function buildForm(entityType, isEdit, recordData = {}) {
+      const config = ENTITY_CONFIG[entityType];
+      formFieldsContainer.innerHTML = '';
+
+      config.fields.forEach(field => {
+        // Skip roomNumber input for edits, but use it as a URL parameter later
+        if (isEdit && field.name === 'roomNumber') {
+          document.getElementById('form-record-id').value = recordData.roomNumber;
+          return;
+        }
+
+        // Skip password field entirely for staff edit since it's handled separately
+        if (isEdit && entityType === 'staff' && field.name === 'password') {
+          // We'll manually show a password change button outside the main loop later if needed
+          return;
+        }
+
+        const value = recordData[field.name];
+        const fieldHtml = createInputField(field, value, isEdit);
+        formFieldsContainer.innerHTML += fieldHtml;
+      });
+    }
+
+    // --- CRUD Handlers ---
+
+    function handleAdd(entityType) {
+      modalTitle.textContent = `Add New ${ENTITY_CONFIG[entityType].title}`;
+      modalSubmitBtn.textContent = 'Add Record';
+      crudForm.dataset.mode = 'add';
+      document.getElementById('form-entity-type').value = entityType;
+      document.getElementById('form-record-id').value = '';
+
+      buildForm(entityType, false);
+      openModal();
+    }
+
+    async function handleEdit(entityType, recordID) {
+      const config = ENTITY_CONFIG[entityType];
+
+      try {
+        const url = `${BASE_URL}/${entityType}/${recordID}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Record not found.');
+        const recordData = await response.json();
+
+        modalTitle.textContent = `Edit ${config.title} (ID: ${recordID})`;
+        modalSubmitBtn.textContent = 'Save Changes';
+        crudForm.dataset.mode = 'edit';
+        document.getElementById('form-entity-type').value = entityType;
+        document.getElementById('form-record-id').value = recordID;
+
+        buildForm(entityType, true, recordData);
+        openModal();
+      } catch (error) {
+        showStatus(`Failed to fetch record for editing: ${error.message}`, false);
+      }
+    }
+
+    async function handleDelete(entity, id, rowId) {
+      if (!confirm(`Are you sure you want to delete ${entity} with ID: ${id}? This action is permanent.`)) return;
+
+      try {
+        const deleteEndpoint = `${BASE_URL}/${entity}/${id}`;
+
+        const response = await fetch(deleteEndpoint, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          showStatus(`${entity} deleted successfully!`, true);
+          const row = document.getElementById(rowId);
+          if (row) row.remove();
+        } else {
+          const result = await response.json();
+          showStatus(`Deletion failed: ${result.error || 'Server error.'}`, false);
+        }
+      } catch (error) {
+        console.error(`Error deleting ${entity}:`, error);
+        showStatus(`Network Error: Could not connect to the server to delete ${entity}.`, false);
+      }
+    }
+
+
+    // --- Form Submission Logic ---
+    crudForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const entityType = document.getElementById('form-entity-type').value;
+      const recordID = document.getElementById('form-record-id').value;
+      const mode = crudForm.dataset.mode;
+
+      const formData = new FormData(crudForm);
+      const data = {};
+      formData.forEach((value, key) => {
+        // Don't send empty fields for PUT requests
+        if (mode === 'edit' && !value) return;
+        data[key] = value;
+      });
+
+      // Clean up special keys
+      delete data.entityType;
+      delete data.recordID;
+
+      // Determine method and URL
+      let method = 'POST';
+      let url = `${BASE_URL}/${entityType}`;
+
+      if (mode === 'edit') {
+        method = 'PUT';
+        // Rooms use roomNumber as the ID in the URL, others use ID key from config
+        const idForUrl = (entityType === 'rooms') ? data.roomNumber : recordID;
+        url = `${BASE_URL}/${entityType}/${idForUrl}`;
+      }
+
+      modalSubmitBtn.textContent = 'Processing...';
+      modalSubmitBtn.disabled = true;
+
+      try {
+        const response = await fetch(url, {
+          method: method,
+          headers: HEADERS,
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (response.ok || response.status === 200 || response.status === 201) {
+          showStatus(`${ENTITY_CONFIG[entityType].title} ${mode === 'add' ? 'added' : 'updated'} successfully!`, true);
+          closeModal();
+          // Reload the current view to show the new/updated data
+          showView(entityType);
+        } else {
+          showStatus(`${mode === 'add' ? 'Addition' : 'Update'} Failed: ${result.error || result.message || 'Unknown Server Error'}`, false);
+        }
+      } catch (error) {
+        showStatus(`Network Error: Could not connect to the server. Is the Flask API running?`, false);
+      } finally {
+        modalSubmitBtn.textContent = mode === 'add' ? 'Add Record' : 'Save Changes';
+        modalSubmitBtn.disabled = false;
+      }
+    });
+
+
+    // --- Data Loading Functions (Simplified/Updated to use native fetch) ---
+    // I will keep the original logic for staff/room data population, but now they are called dynamically.
+
     async function loadStaff() {
       const tableBody = document.getElementById('staff-table-body');
       tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Fetching staff list...</td></tr>';
-
+      // ... (rest of loadStaff logic, same as previous response) ...
       try {
         const response = await fetch(`${BASE_URL}/staff`);
         const staff = await response.json();
@@ -299,18 +579,11 @@
         });
       } catch (error) {
         console.error('Error fetching staff:', error);
+        showStatus('Error: Could not connect to fetch staff data. Is Flask API running?', false);
         tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">Error loading staff data.</td></tr>';
       }
     }
 
-    // Placeholder for Add Staff Button (You would implement a modal form here)
-    document.getElementById('add-staff-btn').addEventListener('click', () => {
-      showStatus('Add Staff feature requires a modal form implementation.', false);
-      // In a real application, you'd open a modal here for POST to /api/staff
-    });
-
-
-    /** --- 5. Room Type Config Logic --- */
     async function loadRoomTypes() {
       const listContainer = document.getElementById('room-type-list');
       listContainer.innerHTML = '<div class="bg-white p-6 rounded-xl shadow-lg text-center text-gray-500">Fetching room types...</div>';
@@ -326,8 +599,9 @@
         }
 
         types.forEach(type => {
+          const rowID = `room-type-${type.roomTypeID}`;
           const card = `
-                        <div id="room-type-${type.roomTypeID}" class="bg-white p-5 rounded-xl shadow-lg border-l-4 border-indigo-500 flex justify-between items-center">
+                        <div id="${rowID}" class="bg-white p-5 rounded-xl shadow-lg border-l-4 border-indigo-500 flex justify-between items-center">
                             <div>
                                 <h3 class="text-xl font-semibold text-gray-800">${type.typeName} (ID: ${type.roomTypeID})</h3>
                                 <p class="text-gray-600 my-1">${type.description}</p>
@@ -338,7 +612,7 @@
                             </div>
                             <div class="space-x-2">
                                 <button onclick="handleEdit('room-types', ${type.roomTypeID})" class="text-indigo-600 hover:text-indigo-900">Edit</button>
-                                <button onclick="handleDelete('room-types', ${type.roomTypeID}, 'room-type-${type.roomTypeID}')" class="text-red-600 hover:text-red-900">Delete</button>
+                                <button onclick="handleDelete('room-types', ${type.roomTypeID}, '${rowID}')" class="text-red-600 hover:text-red-900">Delete</button>
                             </div>
                         </div>
                     `;
@@ -346,17 +620,11 @@
         });
       } catch (error) {
         console.error('Error fetching room types:', error);
+        showStatus('Error: Could not connect to fetch room types. Is Flask API running?', false);
         listContainer.innerHTML = '<div class="bg-white p-6 rounded-xl shadow-lg text-center text-red-500">Error loading room types.</div>';
       }
     }
 
-    // Placeholder for Add Room Type Button
-    document.getElementById('add-room-type-btn').addEventListener('click', () => {
-      showStatus('Add Room Type feature requires a modal form implementation.', false);
-    });
-
-
-    /** --- 6. Room Inventory Logic --- */
     async function loadRooms() {
       const tableBody = document.getElementById('rooms-table-body');
       tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Fetching rooms...</td></tr>';
@@ -373,8 +641,9 @@
 
         rooms.forEach(room => {
           const statusClass = room.currentStatus === 'Available' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+          const rowID = `room-${room.roomNumber}`;
           const row = `
-                        <tr id="room-${room.roomNumber}">
+                        <tr id="${rowID}">
                             <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${room.roomNumber}</td>
                             <td class="px-6 py-4 whitespace-nowrap">${room.roomTypeID}</td>
                             <td class="px-6 py-4 whitespace-nowrap">${room.floorNumber}</td>
@@ -385,7 +654,7 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <button onclick="handleEdit('rooms', '${room.roomNumber}')" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</button>
-                                <button onclick="handleDelete('rooms', '${room.roomNumber}', 'room-${room.roomNumber}')" class="text-red-600 hover:text-red-900">Delete</button>
+                                <button onclick="handleDelete('rooms', '${room.roomNumber}', '${rowID}')" class="text-red-600 hover:text-red-900">Delete</button>
                             </td>
                         </tr>
                     `;
@@ -393,17 +662,11 @@
         });
       } catch (error) {
         console.error('Error fetching rooms:', error);
+        showStatus('Error: Could not connect to fetch room inventory. Is Flask API running?', false);
         tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">Error loading room inventory.</td></tr>';
       }
     }
 
-    // Placeholder for Add Room Button
-    document.getElementById('add-room-btn').addEventListener('click', () => {
-      showStatus('Add Room feature requires a modal form implementation.', false);
-    });
-
-
-    /** --- 7. Services Catalog Logic --- */
     async function loadServices() {
       const tableBody = document.getElementById('services-table-body');
       tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">Fetching services...</td></tr>';
@@ -419,14 +682,15 @@
         }
 
         services.forEach(service => {
+          const rowID = `service-${service.serviceID}`;
           const row = `
-                        <tr id="service-${service.serviceID}">
+                        <tr id="${rowID}">
                             <td class="px-6 py-4 whitespace-nowrap">${service.serviceID}</td>
                             <td class="px-6 py-4 whitespace-nowrap font-medium">${service.serviceName}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-green-600 font-semibold">$${service.unitPrice}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <button onclick="handleEdit('services', ${service.serviceID})" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</button>
-                                <button onclick="handleDelete('services', ${service.serviceID}, 'service-${service.serviceID}')" class="text-red-600 hover:text-red-900">Delete</button>
+                                <button onclick="handleDelete('services', ${service.serviceID}, '${rowID}')" class="text-red-600 hover:text-red-900">Delete</button>
                             </td>
                         </tr>
                     `;
@@ -434,45 +698,11 @@
         });
       } catch (error) {
         console.error('Error fetching services:', error);
+        showStatus('Error: Could not connect to fetch services data. Is Flask API running?', false);
         tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-red-500">Error loading services data.</td></tr>';
       }
     }
 
-    // Placeholder for Add Service Button
-    document.getElementById('add-service-btn').addEventListener('click', () => {
-      showStatus('Add Service feature requires a modal form implementation.', false);
-    });
-
-    /** --- 8. Generic CRUD Handlers --- */
-    function handleEdit(entity, id) {
-      showStatus(`Preparing to edit ${entity} with ID: ${id}. This would launch an edit modal/form.`, false);
-      // Implement PUT logic to /api/{entity}/{id} here
-    }
-
-    async function handleDelete(entity, id, rowId) {
-      if (!confirm(`Are you sure you want to delete ${entity} with ID: ${id}?`)) return;
-
-      try {
-        const deleteEndpoint = (entity === 'rooms') ? `${BASE_URL}/${entity}/${id}` : `${BASE_URL}/${entity}/${id}`;
-
-        const response = await fetch(deleteEndpoint, {
-          method: 'DELETE',
-        });
-
-        if (response.ok) {
-          showStatus(`${entity} deleted successfully!`, true);
-          // Remove the row from the table immediately
-          const row = document.getElementById(rowId);
-          if (row) row.remove();
-        } else {
-          const result = await response.json();
-          showStatus(`Deletion failed: ${result.error || 'Server error.'}`, false);
-        }
-      } catch (error) {
-        console.error(`Error deleting ${entity}:`, error);
-        showStatus(`Network Error: Could not connect to the server to delete ${entity}.`, false);
-      }
-    }
 
     // Initial load on page entry
     window.onload = () => {
