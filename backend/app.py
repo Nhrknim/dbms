@@ -1,7 +1,9 @@
 import pymysql.cursors
+
 from flask import Flask, jsonify, request
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
+from flask_cors import CORS
 
 # ==============================================================================
 # 1. DATABASE CONFIGURATION
@@ -18,6 +20,7 @@ DB_CONFIG = {
 # 2. FLASK APPLICATION SETUP
 # ==============================================================================
 app = Flask(__name__)
+CORS(app)
 
 # ==============================================================================
 # 3. DATABASE CONNECTION FUNCTION
