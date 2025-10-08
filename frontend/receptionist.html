@@ -114,9 +114,12 @@
         <button
           class="tab-button py-2 px-4 rounded-full font-medium text-sm transition duration-200 text-gray-700 bg-gray-100 hover:bg-indigo-100 hover:text-indigo-600"
           data-panel="guest-management">Guest Management</button>
-        <a href="#"
-          class="py-2 px-4 rounded-full bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition duration-150 shadow-md">Log
-          Out</a>
+
+        <button onclick="handleLogout()"
+          class="py-2 px-4 rounded-full bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition duration-150 shadow-md">
+          Log Out
+        </button>
+
       </div>
     </div>
   </header>
@@ -365,7 +368,6 @@
 
 
     // Global data store
-    // CHANGE: allRoomData now stores results from /api/rooms-details
     let allRoomData = [];
     let allReservationData = [];
     let allGuestData = [];
@@ -380,6 +382,20 @@
       el.classList.remove('opacity-0');
       el.classList.add('opacity-100');
     }
+
+    // UPDATED: Logout Function redirects to index.html
+    window.handleLogout = function () {
+      console.log("Logging out and redirecting to index.html...");
+
+      // 1. Clear any local storage/session tokens
+      localStorage.removeItem('staffID');
+      localStorage.removeItem('role');
+      localStorage.removeItem('username');
+
+      // 2. Redirect the user to index.html
+      window.location.href = "index.html";
+    }
+
 
     // --- ROOM STATUS LOGIC (Panel 1) ---
 
@@ -412,7 +428,7 @@
       roomViewMessage.classList.remove('hidden');
 
       try {
-        // CHANGE: Use the new /api/rooms-details endpoint
+        // Fetch all room details (including type name) from the new endpoint
         const response = await fetch(`${API_BASE_URL}/rooms-details`);
         const data = await response.json();
 
@@ -912,7 +928,7 @@
     // --- GLOBAL INITIALIZATION AND REFRESH ---
 
     async function refreshAllData() {
-      // CHANGE: Fetch all room details (including type name) from the new endpoint
+      // Fetch all room details (including type name) from the new endpoint
       await fetchRooms();
       await fetchRoomTypes();
 
