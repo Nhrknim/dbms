@@ -12,6 +12,7 @@
       background-color: #F7F9FC;
     }
 
+    /* Styling for the active navigation link */
     .active-link {
       background-color: #3730A3;
       /* Indigo-800 Darker for hover/active */
@@ -19,6 +20,7 @@
       font-weight: 600;
     }
 
+    /* Ensure main content starts after the sidebar width */
     .main-content {
       margin-left: 16rem;
       /* Tailwind w-64 */
@@ -27,6 +29,16 @@
     /* Modal specific styles */
     .modal-overlay {
       background-color: rgba(0, 0, 0, 0.75);
+    }
+
+    /* SCROLL FIX: Scrollable form content area */
+    .modal-content-scroll {
+      max-height: 70vh;
+      /* Limits max height to 70% of viewport height */
+      overflow-y: auto;
+      /* Enables vertical scrolling */
+      padding-right: 1rem;
+      /* Adds space for the scrollbar */
     }
   </style>
 </head>
@@ -218,16 +230,17 @@
   <div id="crud-modal"
     class="hidden fixed inset-0 z-50 flex items-center justify-center transition-opacity modal-overlay">
     <div class="bg-white p-8 rounded-xl shadow-3xl max-w-lg w-full transform transition-all duration-300">
-      <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Add New Record</h3>
+      <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Add New Record</h3>
 
       <form id="crud-form">
         <input type="hidden" id="form-entity-type" name="entityType">
         <input type="hidden" id="form-record-id" name="recordID">
 
-        <div id="form-fields-container" class="space-y-4 mb-6">
+        <div id="form-scroll-wrapper" class="modal-content-scroll">
+          <div id="form-fields-container" class="space-y-4 mb-6">
+          </div>
         </div>
-
-        <div class="flex justify-end space-x-3">
+        <div class="flex justify-end space-x-3 pt-4 border-t mt-4">
           <button type="button" onclick="closeModal()"
             class="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition">
             Cancel
@@ -266,7 +279,7 @@
           { name: 'email', label: 'Email', type: 'email', required: true },
           { name: 'username', label: 'Username', type: 'text', required: true },
           { name: 'role', label: 'Role', type: 'select', options: ['Admin', 'Manager', 'Receptionist', 'Housekeeping'], required: true },
-          { name: 'password', label: 'Password (Leave blank unless changing)', type: 'password', required: false, forEdit: false },
+          { name: 'password', label: 'Password (Required for new staff)', type: 'password', required: true, isNewOnly: true },
           { name: 'phoneNumber', label: 'Phone Number', type: 'text', required: false },
           { name: 'address', label: 'Address', type: 'text', required: false },
           { name: 'dateOfHire', label: 'Date of Hire', type: 'date', required: false },
@@ -287,7 +300,7 @@
         idKey: 'roomNumber',
         title: 'Room Inventory',
         fields: [
-          { name: 'roomNumber', label: 'Room Number (e.g. 101)', type: 'text', required: true, forEdit: false },
+          { name: 'roomNumber', label: 'Room Number (e.g. 101)', type: 'text', required: true, isNewOnly: true },
           { name: 'roomTypeID', label: 'Room Type ID', type: 'number', required: true },
           { name: 'floorNumber', label: 'Floor Number', type: 'number', required: true },
           { name: 'currentStatus', label: 'Status', type: 'select', options: ['Available', 'Occupied', 'Maintenance'], required: true },
@@ -304,7 +317,7 @@
       }
     };
 
-    /** Navigation and View Switching (Same as before) */
+    /** Navigation and View Switching */
     function showView(viewId) {
       views.forEach(view => {
         view.classList.add('hidden');
@@ -335,7 +348,7 @@
       });
     });
 
-    /** Message Handling (Same as before) */
+    /** Message Handling */
     function showStatus(message, isSuccess = true) {
       statusMessage.textContent = message;
       statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
@@ -363,62 +376,86 @@
 
     // --- Form Building Functions ---
 
-    function createInputField(field, value, isEdit) {
-      const requiredAttr = field.required ? 'required' : '';
+    function createInputField(field, value, isEdit, isPasswordChange = false) {
+      // Use 'let' for requiredAttr to allow for modification
+      let requiredAttr = field.required ? 'required' : '';
       const type = field.type;
       const step = field.step ? `step="${field.step}"` : '';
 
       let inputHtml;
       if (type === 'select') {
         const optionsHtml = field.options.map(opt =>
-          `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`
+          `<option value="${opt}" ${value == opt ? 'selected' : ''}>${opt}</option>` // Use == for coercion
         ).join('');
         inputHtml = `<select id="${field.name}" name="${field.name}" ${requiredAttr} class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">${optionsHtml}</select>`;
       } else if (type === 'textarea') {
         inputHtml = `<textarea id="${field.name}" name="${field.name}" ${requiredAttr} class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">${value || ''}</textarea>`;
       } else {
         // Handle text, number, email, date, password
-        const valueAttr = value !== undefined ? `value="${value}"` : '';
-        const readonlyAttr = (isEdit && field.name === 'roomNumber') ? 'readonly' : ''; // Only rooms.roomNumber is immutable
+        let valueAttr = value !== undefined ? `value="${value}"` : '';
+        let readonlyAttr = '';
 
-        // Hide password field for staff edit unless it's a new entry
-        if (isEdit && field.name === 'password') return '';
+        // Prevent editing primary keys (like roomNumber)
+        if (isEdit && field.name === 'roomNumber') {
+          readonlyAttr = 'readonly';
+        }
+
+        // If this is the password change field, don't make it required automatically
+        if (isPasswordChange) {
+          requiredAttr = '';
+        }
+
+        // Set default for date fields
+        if (type === 'date' && !value && !isEdit) {
+          valueAttr = `value="${new Date().toISOString().split('T')[0]}"`;
+        }
 
         inputHtml = `<input type="${type}" id="${field.name}" name="${field.name}" ${valueAttr} ${requiredAttr} ${step} ${readonlyAttr}
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${readonlyAttr ? 'bg-gray-100' : ''}">`;
       }
 
+      // Only show '*' for fields required for ADD/POST, or explicitly required fields
+      const requiredDisplay = field.required && !isEdit && !isPasswordChange ? '<span class="text-red-500">*</span>' : '';
+
       return `
                 <div>
                     <label for="${field.name}" class="block text-sm font-medium text-gray-700 mb-1">
-                        ${field.label} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                        ${field.label} ${requiredDisplay}
                     </label>
                     ${inputHtml}
                 </div>
             `;
     }
 
+
     function buildForm(entityType, isEdit, recordData = {}) {
       const config = ENTITY_CONFIG[entityType];
       formFieldsContainer.innerHTML = '';
+      let formHTML = '';
 
       config.fields.forEach(field => {
-        // Skip roomNumber input for edits, but use it as a URL parameter later
-        if (isEdit && field.name === 'roomNumber') {
-          document.getElementById('form-record-id').value = recordData.roomNumber;
-          return;
-        }
-
-        // Skip password field entirely for staff edit since it's handled separately
-        if (isEdit && entityType === 'staff' && field.name === 'password') {
-          // We'll manually show a password change button outside the main loop later if needed
+        // Skip 'isNewOnly' fields (like password and roomNumber) if we are editing
+        if (isEdit && field.isNewOnly) {
           return;
         }
 
         const value = recordData[field.name];
-        const fieldHtml = createInputField(field, value, isEdit);
-        formFieldsContainer.innerHTML += fieldHtml;
+        formHTML += createInputField(field, value, isEdit);
       });
+
+      formFieldsContainer.innerHTML = formHTML;
+
+      // Special case for Staff: Add a separate section for Password change during edit
+      if (isEdit && entityType === 'staff') {
+        const passwordFieldConfig = { name: 'password', label: 'New Password', type: 'password', required: false, isNewOnly: false };
+
+        formFieldsContainer.innerHTML += `
+                    <div class="pt-4 border-t border-gray-200">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Change Password (Optional)</h4>
+                        ${createInputField(passwordFieldConfig, '', true, true)}
+                    </div>
+                `;
+      }
     }
 
     // --- CRUD Handlers ---
@@ -438,9 +475,15 @@
       const config = ENTITY_CONFIG[entityType];
 
       try {
-        const url = `${BASE_URL}/${entityType}/${recordID}`;
+        // Ensure the correct ID is used in the URL
+        const idForUrl = (entityType === 'rooms' && typeof recordID === 'string') ? recordID : recordID;
+
+        const url = `${BASE_URL}/${entityType}/${idForUrl}`;
         const response = await fetch(url);
-        if (!response.ok) throw new Error('Record not found.');
+        if (!response.ok) throw new Error('Record not found or server error.');
+
+        // The previous error was likely here: trying to reassign a const variable inside the block.
+        // We've fixed this by using 'let' where values are changed.
         const recordData = await response.json();
 
         modalTitle.textContent = `Edit ${config.title} (ID: ${recordID})`;
@@ -452,6 +495,7 @@
         buildForm(entityType, true, recordData);
         openModal();
       } catch (error) {
+        // Catching the JS error object now, not a constant variable
         showStatus(`Failed to fetch record for editing: ${error.message}`, false);
       }
     }
@@ -492,8 +536,9 @@
       const formData = new FormData(crudForm);
       const data = {};
       formData.forEach((value, key) => {
-        // Don't send empty fields for PUT requests
-        if (mode === 'edit' && !value) return;
+        // For Edit mode, only include fields that have a value
+        if (mode === 'edit' && (value === undefined || value === null || value === '')) return;
+
         data[key] = value;
       });
 
@@ -507,8 +552,8 @@
 
       if (mode === 'edit') {
         method = 'PUT';
-        // Rooms use roomNumber as the ID in the URL, others use ID key from config
-        const idForUrl = (entityType === 'rooms') ? data.roomNumber : recordID;
+        // Rooms use roomNumber as the ID in the URL, others use ID key from config (recordID)
+        const idForUrl = (entityType === 'rooms') ? recordID : recordID;
         url = `${BASE_URL}/${entityType}/${idForUrl}`;
       }
 
@@ -541,13 +586,11 @@
     });
 
 
-    // --- Data Loading Functions (Simplified/Updated to use native fetch) ---
-    // I will keep the original logic for staff/room data population, but now they are called dynamically.
+    // --- Data Loading Functions (CRUD GETs) ---
 
     async function loadStaff() {
       const tableBody = document.getElementById('staff-table-body');
       tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Fetching staff list...</td></tr>';
-      // ... (rest of loadStaff logic, same as previous response) ...
       try {
         const response = await fetch(`${BASE_URL}/staff`);
         const staff = await response.json();
