@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manager/Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #F7F9FC;
+    }
+
+    /* Styling for the active navigation link */
+    .active-link {
+      background-color: #3730A3;
+      /* Indigo-800 Darker for hover/active */
+      color: white;
+      font-weight: 600;
+    }
+
+    /* Ensure main content starts after the sidebar width */
+    .main-content {
+      margin-left: 16rem;
+      /* Tailwind w-64 */
+    }
+  </style>
+</head>
+
+<body class="flex min-h-screen">
+  <div id="app-container" class="w-full flex">
+
+    <aside class="w-64 bg-indigo-700 text-white flex flex-col fixed h-full z-10 shadow-2xl">
+      <div class="p-6 text-2xl font-bold border-b border-indigo-800">
+        Hotel Admin ⚙️
+      </div>
+      <nav id="sidebar-nav" class="flex-grow p-4 space-y-2">
+        <a href="#" data-view="staff-management"
+          class="nav-link flex items-center p-3 rounded-lg hover:bg-indigo-600 active-link">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 20h-1.5a4.5 4.5 0 00-4.5-4.5H9A4.5 4.5 0 004.5 20H3M12 11a4 4 0 100-8 4 4 0 000 8z">
+            </path>
+          </svg>
+          Staff Management
+        </a>
+        <a href="#" data-view="room-type-config" class="nav-link flex items-center p-3 rounded-lg hover:bg-indigo-600">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m7 0h3M7 7h3m-2 4v6">
+            </path>
+          </svg>
+          Room Type Config
+        </a>
+        <a href="#" data-view="room-inventory" class="nav-link flex items-center p-3 rounded-lg hover:bg-indigo-600">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14-8h-14"></path>
+          </svg>
+          Room Inventory
+        </a>
+        <a href="#" data-view="services-catalog" class="nav-link flex items-center p-3 rounded-lg hover:bg-indigo-600">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9.663 17h4.673M12 3v13.5m0 0l-3-3m3 3l3-3"></path>
+          </svg>
+          Services Catalog
+        </a>
+      </nav>
+
+      <div class="p-4 border-t border-indigo-800">
+        <a href="index.html"
+          class="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-lg text-lg font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
+          Log Out
+        </a>
+      </div>
+    </aside>
+
+    <main class="flex-grow p-8 main-content">
+      <h1 class="text-3xl font-bold text-gray-800 mb-6" id="main-title">Staff Management</h1>
+
+      <div id="status-message" class="hidden p-4 mb-6 rounded-lg text-sm transition-opacity duration-300"></div>
+
+      <div id="views-container">
+
+        <section id="view-staff-management" class="management-view">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-semibold text-gray-700">All Staff Accounts</h2>
+            <button id="add-staff-btn"
+              class="py-2 px-4 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition">
+              + Add New Staff
+            </button>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl shadow-lg overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ID</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Username</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Role</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions</th>
+                </tr>
+              </thead>
+              <tbody id="staff-table-body" class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td colspan="5" class="px-6 py-4 text-center text-gray-500">Loading staff data...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="view-room-type-config" class="management-view hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-semibold text-gray-700">Room Type Configuration</h2>
+            <button id="add-room-type-btn"
+              class="py-2 px-4 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition">
+              + Add New Type
+            </button>
+          </div>
+
+          <div id="room-type-list" class="space-y-4">
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center text-gray-500">Loading room types...</div>
+          </div>
+        </section>
+
+        <section id="view-room-inventory" class="management-view hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-semibold text-gray-700">Physical Room Inventory</h2>
+            <button id="add-room-btn"
+              class="py-2 px-4 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition">
+              + Add New Room
+            </button>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl shadow-lg overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Room No.</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type ID</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Floor</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rooms-table-body" class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td colspan="5" class="px-6 py-4 text-center text-gray-500">Loading room inventory...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="view-services-catalog" class="management-view hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-semibold text-gray-700">Services Catalog Management</h2>
+            <button id="add-service-btn"
+              class="py-2 px-4 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition">
+              + Add New Service
+            </button>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl shadow-lg overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ID</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Unit Price</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions</th>
+                </tr>
+              </thead>
+              <tbody id="services-table-body" class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td colspan="4" class="px-6 py-4 text-center text-gray-500">Loading services...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="view-general" class="management-view hidden">
+          <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md" role="alert">
+            <p class="font-bold">Access Warning</p>
+            <p>This section is under construction or reserved for specific administrative reports.</p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const BASE_URL = 'http://127.0.0.1:5000/api';
+    const HEADERS = { 'Content-Type': 'application/json' };
+    const views = document.querySelectorAll('.management-view');
+    const navLinks = document.querySelectorAll('.nav-link');
+    const mainTitle = document.getElementById('main-title');
+    const statusMessage = document.getElementById('status-message');
+
+    /** Navigation and View Switching */
+    function showView(viewId) {
+      views.forEach(view => {
+        view.classList.add('hidden');
+      });
+      const activeView = document.getElementById(`view-${viewId}`);
+      if (activeView) {
+        activeView.classList.remove('hidden');
+        mainTitle.textContent = activeView.querySelector('h2') ? activeView.querySelector('h2').textContent : viewId.replace(/-/g, ' ').toUpperCase();
+        // Load data specific to the view
+        if (viewId === 'staff-management') loadStaff();
+        if (viewId === 'room-type-config') loadRoomTypes();
+        if (viewId === 'room-inventory') loadRooms();
+        if (viewId === 'services-catalog') loadServices();
+      }
+
+      // Update active link class
+      navLinks.forEach(link => link.classList.remove('active-link'));
+      document.querySelector(`[data-view="${viewId}"]`).classList.add('active-link');
+    }
+
+    navLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        showView(e.currentTarget.getAttribute('data-view'));
+      });
+    });
+
+    /** Message Handling */
+    function showStatus(message, isSuccess = true) {
+      statusMessage.textContent = message;
+      statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
+      if (isSuccess) {
+        statusMessage.classList.add('bg-green-100', 'text-green-800');
+      } else {
+        statusMessage.classList.add('bg-red-100', 'text-red-800');
+      }
+      // Auto hide after 5 seconds
+      setTimeout(() => {
+        statusMessage.classList.add('hidden');
+      }, 5000);
+    }
+
+    /** --- 4. Staff Management Logic --- */
+    async function loadStaff() {
+      const tableBody = document.getElementById('staff-table-body');
+      tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Fetching staff list...</td></tr>';
+
+      try {
+        const response = await fetch(`${BASE_URL}/staff`);
+        const staff = await response.json();
+
+        tableBody.innerHTML = '';
+        if (staff.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No staff members found.</td></tr>';
+          return;
+        }
+
+        staff.forEach(member => {
+          const row = `
+                        <tr id="staff-${member.staffID}">
+                            <td class="px-6 py-4 whitespace-nowrap">${member.staffID}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${member.firstName} ${member.lastName}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${member.username}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${member.role === 'Admin' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'}">
+                                    ${member.role}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="handleEdit('staff', ${member.staffID})" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</button>
+                                <button onclick="handleDelete('staff', ${member.staffID}, 'staff-${member.staffID}')" class="text-red-600 hover:text-red-900">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+          tableBody.innerHTML += row;
+        });
+      } catch (error) {
+        console.error('Error fetching staff:', error);
+        tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">Error loading staff data.</td></tr>';
+      }
+    }
+
+    // Placeholder for Add Staff Button (You would implement a modal form here)
+    document.getElementById('add-staff-btn').addEventListener('click', () => {
+      showStatus('Add Staff feature requires a modal form implementation.', false);
+      // In a real application, you'd open a modal here for POST to /api/staff
+    });
+
+
+    /** --- 5. Room Type Config Logic --- */
+    async function loadRoomTypes() {
+      const listContainer = document.getElementById('room-type-list');
+      listContainer.innerHTML = '<div class="bg-white p-6 rounded-xl shadow-lg text-center text-gray-500">Fetching room types...</div>';
+
+      try {
+        const response = await fetch(`${BASE_URL}/room-types`);
+        const types = await response.json();
+
+        listContainer.innerHTML = '';
+        if (types.length === 0) {
+          listContainer.innerHTML = '<div class="bg-white p-6 rounded-xl shadow-lg text-center text-gray-500">No room types configured.</div>';
+          return;
+        }
+
+        types.forEach(type => {
+          const card = `
+                        <div id="room-type-${type.roomTypeID}" class="bg-white p-5 rounded-xl shadow-lg border-l-4 border-indigo-500 flex justify-between items-center">
+                            <div>
+                                <h3 class="text-xl font-semibold text-gray-800">${type.typeName} (ID: ${type.roomTypeID})</h3>
+                                <p class="text-gray-600 my-1">${type.description}</p>
+                                <p class="text-sm text-gray-500">
+                                    Base Price: <span class="font-medium text-green-600">$${type.basePrice}</span> | 
+                                    Capacity: ${type.capacity} Guests
+                                </p>
+                            </div>
+                            <div class="space-x-2">
+                                <button onclick="handleEdit('room-types', ${type.roomTypeID})" class="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                <button onclick="handleDelete('room-types', ${type.roomTypeID}, 'room-type-${type.roomTypeID}')" class="text-red-600 hover:text-red-900">Delete</button>
+                            </div>
+                        </div>
+                    `;
+          listContainer.innerHTML += card;
+        });
+      } catch (error) {
+        console.error('Error fetching room types:', error);
+        listContainer.innerHTML = '<div class="bg-white p-6 rounded-xl shadow-lg text-center text-red-500">Error loading room types.</div>';
+      }
+    }
+
+    // Placeholder for Add Room Type Button
+    document.getElementById('add-room-type-btn').addEventListener('click', () => {
+      showStatus('Add Room Type feature requires a modal form implementation.', false);
+    });
+
+
+    /** --- 6. Room Inventory Logic --- */
+    async function loadRooms() {
+      const tableBody = document.getElementById('rooms-table-body');
+      tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Fetching rooms...</td></tr>';
+
+      try {
+        const response = await fetch(`${BASE_URL}/rooms`);
+        const rooms = await response.json();
+
+        tableBody.innerHTML = '';
+        if (rooms.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No rooms in inventory.</td></tr>';
+          return;
+        }
+
+        rooms.forEach(room => {
+          const statusClass = room.currentStatus === 'Available' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+          const row = `
+                        <tr id="room-${room.roomNumber}">
+                            <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${room.roomNumber}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${room.roomTypeID}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${room.floorNumber}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                                    ${room.currentStatus}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="handleEdit('rooms', '${room.roomNumber}')" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</button>
+                                <button onclick="handleDelete('rooms', '${room.roomNumber}', 'room-${room.roomNumber}')" class="text-red-600 hover:text-red-900">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+          tableBody.innerHTML += row;
+        });
+      } catch (error) {
+        console.error('Error fetching rooms:', error);
+        tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">Error loading room inventory.</td></tr>';
+      }
+    }
+
+    // Placeholder for Add Room Button
+    document.getElementById('add-room-btn').addEventListener('click', () => {
+      showStatus('Add Room feature requires a modal form implementation.', false);
+    });
+
+
+    /** --- 7. Services Catalog Logic --- */
+    async function loadServices() {
+      const tableBody = document.getElementById('services-table-body');
+      tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">Fetching services...</td></tr>';
+
+      try {
+        const response = await fetch(`${BASE_URL}/services`);
+        const services = await response.json();
+
+        tableBody.innerHTML = '';
+        if (services.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">No services configured.</td></tr>';
+          return;
+        }
+
+        services.forEach(service => {
+          const row = `
+                        <tr id="service-${service.serviceID}">
+                            <td class="px-6 py-4 whitespace-nowrap">${service.serviceID}</td>
+                            <td class="px-6 py-4 whitespace-nowrap font-medium">${service.serviceName}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-green-600 font-semibold">$${service.unitPrice}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="handleEdit('services', ${service.serviceID})" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</button>
+                                <button onclick="handleDelete('services', ${service.serviceID}, 'service-${service.serviceID}')" class="text-red-600 hover:text-red-900">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+          tableBody.innerHTML += row;
+        });
+      } catch (error) {
+        console.error('Error fetching services:', error);
+        tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-red-500">Error loading services data.</td></tr>';
+      }
+    }
+
+    // Placeholder for Add Service Button
+    document.getElementById('add-service-btn').addEventListener('click', () => {
+      showStatus('Add Service feature requires a modal form implementation.', false);
+    });
+
+    /** --- 8. Generic CRUD Handlers --- */
+    function handleEdit(entity, id) {
+      showStatus(`Preparing to edit ${entity} with ID: ${id}. This would launch an edit modal/form.`, false);
+      // Implement PUT logic to /api/{entity}/{id} here
+    }
+
+    async function handleDelete(entity, id, rowId) {
+      if (!confirm(`Are you sure you want to delete ${entity} with ID: ${id}?`)) return;
+
+      try {
+        const deleteEndpoint = (entity === 'rooms') ? `${BASE_URL}/${entity}/${id}` : `${BASE_URL}/${entity}/${id}`;
+
+        const response = await fetch(deleteEndpoint, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          showStatus(`${entity} deleted successfully!`, true);
+          // Remove the row from the table immediately
+          const row = document.getElementById(rowId);
+          if (row) row.remove();
+        } else {
+          const result = await response.json();
+          showStatus(`Deletion failed: ${result.error || 'Server error.'}`, false);
+        }
+      } catch (error) {
+        console.error(`Error deleting ${entity}:`, error);
+        showStatus(`Network Error: Could not connect to the server to delete ${entity}.`, false);
+      }
+    }
+
+    // Initial load on page entry
+    window.onload = () => {
+      showView('staff-management'); // Start with the first management view
+    };
+  </script>
+</body>
+
+</html>
