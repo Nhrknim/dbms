@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Receptionist Dashboard - Daily Operations</title>
+  <!-- Load Tailwind CSS for styling -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -101,10 +102,12 @@
 
 <body class="bg-gray-50 min-h-screen">
 
+  <!-- Header and Navigation Tabs -->
   <header class="bg-white shadow-lg p-4 sticky top-0 z-10">
     <div class="flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto">
       <h1 class="text-4xl font-extrabold text-indigo-700 mb-4 md:mb-0">Hotel Reception Control</h1>
       <div class="flex space-x-2 sm:space-x-4">
+        <!-- Navigation Buttons - Data-panel attributes match content IDs -->
         <button
           class="tab-button py-2 px-4 rounded-full font-bold text-sm transition duration-200 shadow-md active-tab-btn bg-indigo-600 text-white hover:bg-indigo-700"
           data-panel="room-view">Room Status</button>
@@ -115,6 +118,7 @@
           class="tab-button py-2 px-4 rounded-full font-medium text-sm transition duration-200 text-gray-700 bg-gray-100 hover:bg-indigo-100 hover:text-indigo-600"
           data-panel="guest-management">Guest Management</button>
 
+        <!-- MODIFIED LOG OUT BUTTON -->
         <button onclick="handleLogout()"
           class="py-2 px-4 rounded-full bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition duration-150 shadow-md">
           Log Out
@@ -124,8 +128,10 @@
     </div>
   </header>
 
+  <!-- Main Content Panels -->
   <main class="max-w-7xl mx-auto p-4 sm:p-8">
 
+    <!-- Panel 1: Live Room Status View (Functional READ) -->
     <div id="room-view" class="tab-panel active">
       <h2 class="text-3xl font-bold text-gray-800 mb-8 border-b pb-3">Live Room Status Dashboard</h2>
       <div id="room-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -133,11 +139,13 @@
       </div>
     </div>
 
+    <!-- Panel 2: Guest Check-in (REGISTER AND BOOK) -->
     <div id="guest-booking" class="tab-panel">
       <h2 class="text-3xl font-bold text-gray-800 mb-8 border-b pb-3">Single-Step Guest Check-in</h2>
 
       <form id="create-reservation-form" class="space-y-6">
 
+        <!-- Guest Registration Card -->
         <div class="bg-white p-6 rounded-xl shadow-xl border border-blue-100">
           <h3 class="text-2xl font-bold text-blue-700 mb-4 pb-2 border-b">1. Guest Registration</h3>
           <div class="space-y-4">
@@ -164,10 +172,12 @@
           </div>
         </div>
 
+        <!-- Room & Booking Details Card -->
         <div class="bg-white p-6 rounded-xl shadow-xl border border-green-100">
           <h3 class="text-2xl font-bold text-green-700 mb-4 pb-2 border-b">2. Room & Stay Details</h3>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <!-- Room Type Selection -->
             <div>
               <label for="res-room-type" class="block text-sm font-medium text-gray-700 mb-1">Required Room Type</label>
               <select id="res-room-type"
@@ -176,15 +186,18 @@
                 <option value="" disabled selected>Loading Room Types...</option>
               </select>
             </div>
+            <!-- Base Price Display -->
             <div>
               <label for="res-base-price-display" class="block text-sm font-medium text-gray-700 mb-1">Base Price Per
                 Night</label>
+              <!-- Currency changed from $ to ₹ -->
               <p id="res-base-price-display"
                 class="w-full border p-3 rounded-lg bg-gray-100 text-gray-800 font-extrabold text-lg">₹0.00</p>
             </div>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <!-- Room Selection (Now dependent on Room Type) -->
             <div>
               <label for="res-room-number" class="block text-sm font-medium text-gray-700 mb-1">Available Room #</label>
               <select id="res-room-number"
@@ -208,6 +221,7 @@
                 class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm"
                 required>
             </div>
+            <!-- Combined Adults and Children into a nested 2-column grid -->
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label for="res-adults" class="block text-sm font-medium text-gray-700 mb-1">Adults</label>
@@ -224,6 +238,7 @@
             </div>
           </div>
 
+          <!-- Removed the old single-line children div -->
         </div>
 
         <div class="pt-4">
@@ -236,15 +251,13 @@
       </form>
     </div>
 
+    <!-- Panel 3: Active Guest & Room Management (Functional READ, PUT, DELETE) -->
     <div id="guest-management" class="tab-panel">
       <h2 class="text-3xl font-bold text-gray-800 mb-8 border-b pb-3">Active Guest & Room Management</h2>
       <div class="bg-white p-6 rounded-xl shadow-xl">
         <h3 class="text-xl font-semibold text-gray-700 mb-4">Guests Currently Checked In</h3>
         <p id="occupied-rooms-message" class="mt-4 text-sm hidden mb-4 font-semibold"></p>
-        <p class="text-sm text-red-600 mb-6 p-3 bg-red-50 rounded-lg border border-red-200">
-          <span class="font-bold">IMPORTANT:</span> Guest records are temporary and are **automatically deleted** upon
-          check-out.
-        </p>
+
 
         <div class="overflow-x-auto shadow-md rounded-lg">
           <table class="min-w-full divide-y divide-gray-200">
@@ -260,6 +273,7 @@
               </tr>
             </thead>
             <tbody id="occupied-rooms-table-body" class="bg-white divide-y divide-gray-100">
+              <!-- Data loaded by JS -->
             </tbody>
           </table>
         </div>
@@ -268,6 +282,7 @@
 
   </main>
 
+  <!-- Edit Guest Modal -->
   <div id="edit-guest-modal" class="modal-backdrop hidden">
     <div
       class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg mx-4 transform transition-all duration-300 scale-100">
@@ -330,6 +345,96 @@
     </div>
   </div>
 
+  <!-- NEW PAYMENT MODAL -->
+  <div id="checkout-payment-modal" class="modal-backdrop hidden">
+    <div
+      class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl mx-4 transform transition-all duration-300 scale-100">
+      <h3 class="text-2xl font-bold text-green-700 mb-6 border-b pb-2">Complete Payment & Checkout</h3>
+      <div class="flex justify-between items-center text-sm mb-4">
+        <p class="font-semibold text-gray-700">Guest: <span id="payment-guest-name" class="font-bold"></span> (ID: <span
+            id="payment-guest-id" class="font-bold"></span>)</p>
+        <p class="font-semibold text-gray-700">Room: <span id="payment-room-number"
+            class="font-bold text-red-600"></span></p>
+      </div>
+
+      <form id="payment-form" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <!-- Billing Details Column -->
+          <div class="bg-gray-50 p-4 rounded-lg border">
+            <h4 class="font-bold text-lg text-gray-700 mb-3 border-b pb-1">1. Bill Summary</h4>
+            <div class="space-y-2 text-sm">
+              <p>Check-in: <span id="payment-check-in"></span></p>
+              <p>Check-out: <span id="payment-check-out"></span></p>
+              <p class="font-semibold">Nights: <span id="payment-nights" class="font-extrabold text-indigo-600">0</span>
+              </p>
+              <p class="font-semibold text-base pt-2 border-t mt-2">Room Price: <span id="payment-room-price"
+                  class="font-extrabold">₹0.00</span></p>
+            </div>
+
+            <label class="block text-xs font-medium text-gray-500 mt-4">Calculated Sub Total (Room + Services)</label>
+            <input type="number" id="payment-sub-total" placeholder="Sub Total Amount (e.g., 5000)" value="0.00" min="0"
+              step="0.01" required
+              class="w-full border p-2 rounded-lg font-bold text-gray-800 bg-white focus:ring-green-500 focus:border-green-500 transition duration-100">
+
+            <label class="block text-xs font-medium text-gray-500 mt-3">Tax Amount (Optional)</label>
+            <input type="number" id="payment-tax-amount" placeholder="Tax (e.g., 500)" value="0.00" min="0" step="0.01"
+              class="w-full border p-2 rounded-lg bg-white focus:ring-green-500 focus:border-green-500 transition duration-100">
+
+            <label class="block text-sm font-bold text-gray-800 mt-4 pt-2 border-t">TOTAL AMOUNT DUE (₹)</label>
+            <input type="number" id="payment-total-amount" placeholder="Total Amount Due" value="0.00" min="0"
+              step="0.01" required
+              class="w-full border-2 border-indigo-500 p-3 rounded-lg font-extrabold text-xl text-indigo-700 bg-indigo-50">
+          </div>
+
+          <!-- Payment Details Column -->
+          <div class="space-y-4">
+            <h4 class="font-bold text-lg text-gray-700 mb-3 border-b pb-1">2. Payment Recording</h4>
+
+            <div>
+              <label for="payment-method" class="block text-sm font-medium text-gray-700 mb-1">Payment Method
+                (Required)</label>
+              <select id="payment-method" required
+                class="w-full border p-2 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-100">
+                <option value="" disabled selected>Select Payment Type</option>
+                <option value="Card">Credit/Debit Card</option>
+                <option value="Cash">Cash</option>
+                <option value="UPI">UPI/Digital Payment</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="payment-amount-paid" class="block text-sm font-medium text-gray-700 mb-1">Amount Paid
+                (₹)</label>
+              <input type="number" id="payment-amount-paid" placeholder="Actual Amount Paid" value="0.00" min="0"
+                step="0.01" required
+                class="w-full border p-2 rounded-lg font-bold text-gray-800 focus:ring-indigo-500 focus:border-indigo-500 transition duration-100">
+            </div>
+
+            <div>
+              <label for="payment-transaction-id" class="block text-sm font-medium text-gray-700 mb-1">Transaction
+                ID/Reference (Optional)</label>
+              <input type="text" id="payment-transaction-id" placeholder="Enter Transaction ID"
+                class="w-full border p-2 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-100">
+            </div>
+
+            <p id="payment-message" class="text-sm pt-2 hidden font-semibold"></p>
+          </div>
+
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-4">
+          <button type="button" onclick="closePaymentModal()"
+            class="py-2 px-4 bg-gray-200 text-gray-700 font-semibold rounded-full hover:bg-gray-300 transition duration-150 shadow-md">Cancel</button>
+          <button type="submit"
+            class="py-2 px-6 bg-green-600 text-white font-bold rounded-full hover:bg-green-700 transition duration-150 shadow-md">
+            Record Payment & Finalize Checkout
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 
   <script>
     const API_BASE_URL = 'http://127.0.0.1:5000/api';
@@ -344,6 +449,14 @@
     const occupiedRoomsTableBody = document.getElementById('occupied-rooms-table-body');
     const occupiedRoomsMessage = document.getElementById('occupied-rooms-message');
     const resBasePriceDisplay = document.getElementById('res-base-price-display');
+    const checkoutPaymentModal = document.getElementById('checkout-payment-modal');
+    const paymentForm = document.getElementById('payment-form');
+    const paymentMessage = document.getElementById('payment-message');
+    const paymentSubTotal = document.getElementById('payment-sub-total');
+    const paymentTaxAmount = document.getElementById('payment-tax-amount');
+    const paymentTotalAmount = document.getElementById('payment-total-amount');
+    const paymentAmountPaid = document.getElementById('payment-amount-paid');
+
 
     // Guest Registration Inputs (simplified)
     const guestFirstName = document.getElementById('guest-first-name');
@@ -373,6 +486,13 @@
     let allGuestData = [];
     let allRoomTypes = [];
 
+    // State for current checkout
+    let currentCheckoutData = {
+      roomNumber: null,
+      reservationID: null,
+      guestID: null
+    };
+
 
     // --- Utility Functions ---
     function displayMessage(el, text, isError = false) {
@@ -383,7 +503,7 @@
       el.classList.add('opacity-100');
     }
 
-    // UPDATED: Logout Function redirects to index.html
+    // Logout Function redirects to index.html
     window.handleLogout = function () {
       console.log("Logging out and redirecting to index.html...");
 
@@ -394,6 +514,14 @@
 
       // 2. Redirect the user to index.html
       window.location.href = "index.html";
+    }
+
+    function dateDiffInDays(dateIn, dateOut) {
+      const d1 = new Date(dateIn);
+      const d2 = new Date(dateOut);
+      const diffTime = Math.abs(d2 - d1);
+      // Add 1 to include the checkout day for a simple hotel stay charge calculation
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
     }
 
 
@@ -451,7 +579,7 @@
           const normalizedStatus = getRoomCardClass(room.currentStatus);
           const cardClass = `status-${normalizedStatus}`;
 
-          // FIX: Use room.roomType which is now correctly retrieved via the new endpoint
+          // Use room.roomType which is now correctly retrieved via the new endpoint
           const roomTypeDisplay = room.roomType || 'Unknown Type';
 
           let buttonHtml = '';
@@ -493,7 +621,8 @@
 							</div>
 							<p class="text-sm font-bold text-gray-700 mb-1">${roomTypeDisplay}</p>
 							<p class="text-xs text-gray-500">Floor: ${room.floorNumber}</p>
-							${buttonHtml} `;
+							${buttonHtml} <!-- Inject the action button here -->
+						`;
           roomGrid.appendChild(card);
         });
       } catch (error) {
@@ -537,6 +666,19 @@
       } catch (error) {
         console.error("Failed to fetch reservations:", error);
         allReservationData = [];
+      }
+    }
+
+    // HELPER FUNCTION: Delete Reservation
+    async function deleteReservation(reservationID) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/reservations/${reservationID}`, {
+          method: 'DELETE',
+        });
+        return response.ok;
+      } catch (error) {
+        console.error(`Failed to delete reservation ${reservationID}:`, error);
+        return false;
       }
     }
 
@@ -670,7 +812,6 @@
 
         if (response.ok) {
           // Step 3: Update Room Status to Occupied (Check-in)
-          // Uses the original /api/rooms/<room_number> PUT endpoint
           await updateRoomStatus(reservationData.roomNumber, 'Occupied');
 
           displayMessage(reservationMessage,
@@ -775,9 +916,9 @@
 									class="py-1 px-3 bg-indigo-500 text-white rounded-full text-xs font-semibold hover:bg-indigo-600 transition duration-150 shadow-sm">
 									Edit Guest
 								</button>
-								<button onclick="startCheckout(${room.roomNumber})" 
+								<button onclick="openPaymentModal(${room.roomNumber})" 
 									class="py-1 px-3 bg-red-500 text-white rounded-full text-xs font-semibold hover:bg-red-600 transition duration-150 shadow-sm">
-									Check Out
+									Check Out (Pay)
 								</button>
 							</td>
 						</tr>
@@ -825,44 +966,224 @@
       }
     }
 
-    window.startCheckout = async function (roomNumber) {
-      // 1. Find the active reservation for this room
+    // New function to open the payment modal and populate data
+    window.openPaymentModal = async function (roomNumber) {
       const activeReservation = await findActiveReservationForRoom(roomNumber);
       if (!activeReservation) {
-        displayMessage(occupiedRoomsMessage, `Error: No active reservation found for Room ${roomNumber}. Cannot proceed.`, true);
+        displayMessage(occupiedRoomsMessage, `Error: No active reservation found for Room ${roomNumber}.`, true);
         return;
       }
-      const guestIDToDelete = activeReservation.guestID;
+      const guest = getGuestById(activeReservation.guestID);
+      const roomDetails = allRoomData.find(r => r.roomNumber === roomNumber);
 
-      displayMessage(occupiedRoomsMessage, `Processing checkout for Room ${roomNumber} (Guest ID: ${guestIDToDelete})...`, false);
-
-      // 2. Mark Room for Cleaning
-      const roomUpdateSuccess = await updateRoomStatus(roomNumber, 'Needs Cleaning');
-
-      if (roomUpdateSuccess) {
-        // 3. Delete Guest Record
-        const guestDeleteSuccess = await deleteGuest(guestIDToDelete);
-
-        if (guestDeleteSuccess) {
-          displayMessage(occupiedRoomsMessage,
-            `Checkout success! Room ${roomNumber} now 'Needs Cleaning'. Guest (ID: ${guestIDToDelete}) has been deleted.`,
-            false
-          );
-        } else {
-          displayMessage(occupiedRoomsMessage,
-            `Room checkout successful, but **FAILED to delete Guest** (ID: ${guestIDToDelete}). Check API.`,
-            true
-          );
-        }
-      } else {
-        displayMessage(occupiedRoomsMessage, `Failed to update room status for checkout.`, true);
+      if (!guest || !roomDetails) {
+        displayMessage(occupiedRoomsMessage, `Error: Missing guest or room data for Room ${roomNumber}.`, true);
+        return;
       }
 
-      // 4. Refresh all affected modules
+      // 1. Set global state
+      currentCheckoutData.roomNumber = roomNumber;
+      currentCheckoutData.reservationID = activeReservation.reservationID;
+      currentCheckoutData.guestID = activeReservation.guestID;
+
+      // 2. Populate modal details
+      document.getElementById('payment-guest-name').textContent = `${guest.firstName} ${guest.lastName}`;
+      document.getElementById('payment-guest-id').textContent = guest.guestID;
+      document.getElementById('payment-room-number').textContent = roomNumber;
+      document.getElementById('payment-check-in').textContent = activeReservation.checkInDate;
+      document.getElementById('payment-check-out').textContent = activeReservation.checkOutDate;
+
+      const nights = dateDiffInDays(activeReservation.checkInDate, activeReservation.checkOutDate);
+      document.getElementById('payment-nights').textContent = nights;
+
+      const basePrice = roomDetails.basePrice || 0;
+      document.getElementById('payment-room-price').textContent = `₹${(basePrice * nights).toFixed(2)}`;
+
+      // Simple initial calculation (Room charges only)
+      const initialTotal = basePrice * nights;
+      paymentSubTotal.value = initialTotal.toFixed(2);
+      paymentTaxAmount.value = (initialTotal * 0.1).toFixed(2); // 10% dummy tax
+      paymentTotalAmount.value = (initialTotal * 1.1).toFixed(2);
+      paymentAmountPaid.value = (initialTotal * 1.1).toFixed(2); // Pre-fill amount paid
+
+      // Listen for total amount changes and update amount paid
+      paymentTotalAmount.addEventListener('change', () => {
+        paymentAmountPaid.value = paymentTotalAmount.value;
+      });
+      paymentSubTotal.addEventListener('change', calculateTotalFromSub);
+      paymentTaxAmount.addEventListener('change', calculateTotalFromSub);
+
+      function calculateTotalFromSub() {
+        const sub = parseFloat(paymentSubTotal.value) || 0;
+        const tax = parseFloat(paymentTaxAmount.value) || 0;
+        const total = sub + tax;
+        paymentTotalAmount.value = total.toFixed(2);
+        paymentAmountPaid.value = total.toFixed(2);
+      }
+
+      displayMessage(paymentMessage, '', false); // Clear previous messages
+      checkoutPaymentModal.classList.remove('hidden');
+    }
+
+    window.closePaymentModal = function () {
+      checkoutPaymentModal.classList.add('hidden');
+      paymentForm.reset();
+      currentCheckoutData = { roomNumber: null, reservationID: null, guestID: null };
+    }
+
+    async function updateReservationStatus(reservationID, status) {
+      // Note: The backend endpoint provided in your previous context
+      // hardcodes the status to 'Checked-out', so the 'status' argument 
+      // is conceptually passed but might be ignored by the current Python API.
+      // However, we pass it for future-proofing.
+
+      const url = `${API_BASE_URL}/reservations/${reservationID}/status`; // FIX APPLIED
+
+      try {
+        const response = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // The status may not be needed in the body since your Python API hardcodes it,
+          // but for a standard PUT request, it's good practice.
+          body: JSON.stringify({ new_status: status }),
+        });
+
+        // Check if the HTTP status code indicates success (e.g., 200 OK)
+        if (response.ok) {
+          // Optionally parse the response if you need the message/data
+          const data = await response.json();
+          console.log(`API Success: ${data.message || 'Reservation status updated.'}`);
+          return true;
+        } else {
+          // Handle HTTP error statuses (4xx, 5xx)
+          const errorData = await response.json();
+          console.error(`API Error for Reservation ${reservationID}: ${response.status} ${response.statusText}`, errorData);
+          return false;
+        }
+
+      } catch (error) {
+        // Handle network errors (e.g., server unreachable, connection reset)
+        console.error(`Network or unexpected error while updating Reservation ${reservationID}:`, error);
+        return false;
+      }
+    }
+
+    // New function to handle final cleanup steps
+    async function finalizeCheckoutCleanup(roomNumber, reservationID, guestID) {
+
+      let successMessage = `Checkout complete! Room ${roomNumber} now 'Needs Cleaning'.`;
+      let errorMessage = `Checkout cleanup partially failed for Room ${roomNumber}.`;
+      let errorDetails = [];
+
+      // 1. Mark Room for Cleaning
+      const roomUpdateSuccess = await updateRoomStatus(roomNumber, 'Needs Cleaning');
+      if (!roomUpdateSuccess) {
+        errorDetails.push('Room status update failed.');
+      }
+
+      // 2. Update Reservation Status instead of deleting
+      // We assume an async function wrapper for the provided API logic exists.
+      const newReservationStatus = 'Checked-out';
+      const reservationUpdateSuccess = await updateReservationStatus(reservationID, newReservationStatus);
+
+      if (reservationUpdateSuccess) {
+        successMessage += ` Reservation status changed to '${newReservationStatus}'.`;
+      } else {
+        errorDetails.push(`Failed to update Reservation status to '${newReservationStatus}'.`);
+      }
+
+      // 3. Skip deleting Guest Record (Retention for History/Marketing)
+      successMessage += ` Guest record (ID: ${guestID}) retained.`;
+
+
+      // Final Status Output
+      if (errorDetails.length > 0) {
+        // NOTE: 'occupiedRoomsMessage' is assumed to be a global/passed variable for a display target
+        displayMessage(occupiedRoomsMessage, `${errorMessage} Details: ${errorDetails.join(' ')}`, true);
+      } else {
+        displayMessage(occupiedRoomsMessage, successMessage, false);
+      }
+
+      // Refresh all affected modules
       refreshAllData();
     }
 
-    // --- EDIT GUEST MODAL FUNCTIONS ---
+    // Main handler for Payment and Checkout sequence
+    paymentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      displayMessage(paymentMessage, 'Processing billing and payment...', false);
+
+      const { roomNumber, reservationID, guestID } = currentCheckoutData;
+
+      // --- Step A: Create Billing Record ---
+      const billDate = new Date().toISOString().split('T')[0];
+      const billingData = {
+        reservationID: reservationID,
+        billDate: billDate,
+        subTotal: parseFloat(paymentSubTotal.value),
+        taxAmount: parseFloat(paymentTaxAmount.value),
+        totalAmount: parseFloat(paymentTotalAmount.value),
+        paymentStatus: 'Paid' // Assume payment is always recorded upon checkout
+      };
+
+      let billID;
+      try {
+        const billResponse = await fetch(`${API_BASE_URL}/billing`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(billingData)
+        });
+        const billResult = await billResponse.json();
+
+        if (!billResponse.ok) {
+          displayMessage(paymentMessage, `Billing failed: ${billResult.error || 'Server error'}`, true);
+          return;
+        }
+        billID = billResult.billID;
+      } catch (error) {
+        displayMessage(paymentMessage, 'Network Error: Billing failed.', true);
+        console.error('Billing creation failed:', error);
+        return;
+      }
+
+      // --- Step B: Create Payment Record ---
+      const paymentData = {
+        billID: billID,
+        paymentMethod: document.getElementById('payment-method').value,
+        paymentDate: billDate,
+        amountPaid: parseFloat(paymentAmountPaid.value),
+        transactionID: document.getElementById('payment-transaction-id').value || null
+      };
+
+      try {
+        const paymentResponse = await fetch(`${API_BASE_URL}/payments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(paymentData)
+        });
+        const paymentResult = await paymentResponse.json();
+
+        if (!paymentResponse.ok) {
+          displayMessage(paymentMessage, `Payment recording failed: ${paymentResult.error || 'Server error'}`, true);
+          return;
+        }
+      } catch (error) {
+        displayMessage(paymentMessage, 'Network Error: Payment failed.', true);
+        console.error('Payment recording failed:', error);
+        return;
+      }
+
+      // --- Step C: Finalize Checkout Cleanup ---
+      displayMessage(paymentMessage, 'Payment recorded. Finalizing checkout...', false);
+      closePaymentModal();
+
+      // This function handles the rest of the database cleanup (Room, Reservation, Guest deletion)
+      await finalizeCheckoutCleanup(roomNumber, reservationID, guestID);
+    });
+
+    // --- EDIT GUEST MODAL FUNCTIONS (unchanged) ---
 
     window.openEditGuestModal = function (guestID) {
       const guest = getGuestById(guestID);
@@ -925,23 +1246,23 @@
       }
     });
 
-    // --- GLOBAL INITIALIZATION AND REFRESH ---
+    // --- GLOBAL INITIALIZATION AND REFRESH (Fixed Sequencing) ---
 
     async function refreshAllData() {
-      // Fetch all room details (including type name) from the new endpoint
+      // Fetch core descriptive data
       await fetchRooms();
       await fetchRoomTypes();
 
-      // Load relational data in parallel
-      fetchReservations();
-      fetchGuests();
+      // Fetch transactional data and WAIT for completion to ensure table displays current state
+      await fetchReservations();
+      await fetchGuests();
 
-      // Dependent functions run once data is (mostly) ready
+      // Dependent functions run after data is ready
       populateRoomTypeDropdown();
       fetchActiveGuestsAndRooms();
     }
 
-    // --- General Tab Switching & Initialization Logic ---
+    // --- General Tab Switching & Initialization Logic (unchanged) ---
     document.addEventListener('DOMContentLoaded', () => {
       const tabButtons = document.querySelectorAll('.tab-button');
       const tabPanels = document.querySelectorAll('.tab-panel');

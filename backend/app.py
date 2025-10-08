@@ -93,6 +93,11 @@ def login():
 # ==============================================================================
 
 
+# ==============================================================================
+# 5. API ENDPOINTS TO MANAGE GUEST DATA
+# ==============================================================================
+
+
 @app.route('/api/guests', methods=['POST'])
 def add_guest():
     """Adds a new guest to the 'Guest' table."""
@@ -105,8 +110,17 @@ def add_guest():
         first_name = guest_data.get('firstName')
         last_name = guest_data.get('lastName')
         email = guest_data.get('email')
+        # --- FIX APPLIED HERE ---
+        # Convert empty strings from form fields to None, allowing NULL database columns to work.
         phone_number = guest_data.get('phoneNumber')
+        if phone_number == "":
+            phone_number = None
+
         address = guest_data.get('address')
+        if address == "":
+            address = None
+        # ------------------------
+
         id_proof = guest_data.get('idProof')
 
         if not all([first_name, last_name, email, id_proof]):
@@ -122,6 +136,7 @@ def add_guest():
             VALUES (%s, %s, %s, %s, %s, %s)
             """
             cursor.execute(sql, (first_name, last_name, email,
+                                 # 'address' and 'phoneNumber' are now correctly None or a value
                                  phone_number, address, id_proof))
             connection.commit()
 
@@ -679,7 +694,59 @@ def delete_reservation(reservation_id):
     finally:
         if connection:
             connection.close()
+            connection.close()
 
+
+@app.route('/api/reservations/<int:reservation_id>/status', methods=['PUT'])
+def update_reservation_status(reservation_id):
+    """Updates the status of an existing reservation record."""
+    connection = None
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed.'}), 500
+
+        # Read status from the request body sent by the frontend
+        request_data = request.get_json()
+        # Default to Checked-out if missing
+        new_status = request_data.get('new_status', 'Checked-out')
+
+        print(
+            f"--- DEBUG: Attempting status update for ID {reservation_id} to '{new_status}' ---")
+
+        with connection.cursor() as cursor:
+            # Check query capitalization
+            sql_check = "SELECT reservationID FROM RESERVATION WHERE reservationID = %s"
+            cursor.execute(sql_check, (reservation_id,))
+            if not cursor.fetchone():
+                return jsonify({'error': 'Reservation not found'}), 404
+
+            # Check update query capitalization
+            sql_update = "UPDATE RESERVATION SET reservationStatus = %s WHERE reservationID = %s"
+
+            # DEBUG: Print the exact values being executed
+            print(
+                f"Executing SQL: UPDATE RESERVATION SET reservationStatus = '{new_status}' WHERE reservationID = {reservation_id}")
+
+            cursor.execute(sql_update, (new_status, reservation_id))
+            connection.commit()
+
+            # Check if any rows were affected (optional but helpful for confirmation)
+            if cursor.rowcount == 0:
+                print(
+                    f"Warning: No rows updated for reservation ID {reservation_id}. Status might already be {new_status}.")
+
+        return jsonify({'message': f'Reservation {reservation_id} status updated to {new_status}!'}), 200
+
+    except pymysql.MySQLError as e:
+        print(f"MySQL Error: {e}")
+        return jsonify({'error': 'Database error', 'details': str(e)}), 500
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return jsonify({'error': 'An unexpected error occurred.', 'details': str(e)}), 500
+    finally:
+        if connection:
+            connection.close()
 # ==============================================================================
 # 11. API ENDPOINTS FOR ROOM TYPE MANAGEMENT
 # ==============================================================================
@@ -975,6 +1042,7 @@ def get_room(room_number):
         if connection:
             connection.close()
 
+
 @app.route('/api/rooms-details', methods=['GET'])
 def get_all_rooms_with_details():
     """
@@ -1010,6 +1078,7 @@ def get_all_rooms_with_details():
     finally:
         if connection:
             connection.close()
+
 
 @app.route('/api/rooms/<room_number>', methods=['PUT'])
 def update_room(room_number):
