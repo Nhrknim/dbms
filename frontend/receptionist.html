@@ -5,7 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Receptionist Dashboard - Daily Operations</title>
-  <!-- Load Tailwind CSS for styling -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -21,211 +20,243 @@
       display: block;
     }
 
+    /* Modal backdrop styles */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      /* Slightly darker backdrop */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+    }
+
     /* Style for live room view cards */
     .room-status-card {
-      transition: transform 0.2s;
+      transition: all 0.2s ease-in-out;
       cursor: pointer;
+      border-left: 6px solid;
+      /* Use border-l-6 utility */
     }
 
     .room-status-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      transform: translateY(-3px);
+      /* Slightly more lift */
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Status Pill Styling (New) */
+    .status-pill {
+      padding: 2px 8px;
+      border-radius: 9999px;
+      /* full rounded */
+      font-size: 0.75rem;
+      /* text-xs */
+      font-weight: 600;
+      /* font-semibold */
     }
 
     /* Status Colors must match the data inserted in MySQL */
     .status-Available {
       background-color: #d1fae5;
+      /* Green 100 */
       border-color: #10b981;
+      /* Green 500 */
       color: #065f46;
+      /* Green 800 */
     }
 
-    /* Green */
     .status-Occupied {
       background-color: #fee2e2;
+      /* Red 100 */
       border-color: #ef4444;
+      /* Red 500 */
       color: #991b1b;
+      /* Red 800 */
     }
 
-    /* Red */
     .status-Needs-Cleaning {
       background-color: #fef3c7;
+      /* Amber 100 */
       border-color: #f59e0b;
+      /* Amber 500 */
       color: #92400e;
+      /* Amber 800 */
     }
 
-    /* Yellow */
     .status-Maintenance {
-      background-color: #e0f2f1;
-      border-color: #0d9488;
-      color: #0f766e;
+      background-color: #e0f7fa;
+      /* Cyan 100 */
+      border-color: #00bcd4;
+      /* Cyan 500 */
+      color: #00838f;
+      /* Cyan 800 */
     }
-
-    /* Teal */
   </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-50 min-h-screen">
 
-  <!-- Header and Navigation Tabs -->
-  <header class="bg-white shadow-md p-4 sticky top-0 z-10">
-    <div class="flex justify-between items-center max-w-7xl mx-auto">
-      <h1 class="text-3xl font-bold text-green-700">Reception Operations</h1>
-      <div class="flex space-x-4">
-        <!-- Navigation Buttons - Data-panel attributes match content IDs -->
+  <header class="bg-white shadow-lg p-4 sticky top-0 z-10">
+    <div class="flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto">
+      <h1 class="text-4xl font-extrabold text-indigo-700 mb-4 md:mb-0">Hotel Reception Control</h1>
+      <div class="flex space-x-2 sm:space-x-4">
         <button
-          class="tab-button py-2 px-4 rounded-lg font-medium transition duration-150 bg-green-100 text-green-700 active-tab-btn"
-          data-panel="room-view">Live Room Status</button>
+          class="tab-button py-2 px-4 rounded-full font-bold text-sm transition duration-200 shadow-md active-tab-btn bg-indigo-600 text-white hover:bg-indigo-700"
+          data-panel="room-view">Room Status</button>
         <button
-          class="tab-button py-2 px-4 rounded-lg font-medium transition duration-150 text-gray-600 hover:bg-gray-200"
-          data-panel="guest-booking">Guest & Booking Management</button>
+          class="tab-button py-2 px-4 rounded-full font-medium text-sm transition duration-200 text-gray-700 bg-gray-100 hover:bg-indigo-100 hover:text-indigo-600"
+          data-panel="guest-booking">Check-in</button>
         <button
-          class="tab-button py-2 px-4 rounded-lg font-medium transition duration-150 text-gray-600 hover:bg-gray-200"
-          data-panel="billing-checkout">Check-out & Billing</button>
-        <a href="index.html"
-          class="py-2 px-4 rounded-lg bg-red-500 text-white hover:bg-red-600 transition duration-150">Log Out</a>
+          class="tab-button py-2 px-4 rounded-full font-medium text-sm transition duration-200 text-gray-700 bg-gray-100 hover:bg-indigo-100 hover:text-indigo-600"
+          data-panel="guest-management">Guest Management</button>
+        <a href="#"
+          class="py-2 px-4 rounded-full bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition duration-150 shadow-md">Log
+          Out</a>
       </div>
     </div>
   </header>
 
-  <!-- Main Content Panels -->
-  <main class="max-w-7xl mx-auto p-8">
+  <main class="max-w-7xl mx-auto p-4 sm:p-8">
 
-    <!-- Panel 1: Live Room Status View (Functional READ) -->
     <div id="room-view" class="tab-panel active">
-      <h2 class="text-3xl font-semibold text-gray-800 mb-6">Live Room Status View (Current Availability)</h2>
-      <div id="room-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      <h2 class="text-3xl font-bold text-gray-800 mb-8 border-b pb-3">Live Room Status Dashboard</h2>
+      <div id="room-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
         <p id="room-view-message" class="text-gray-500 col-span-full">Loading room status...</p>
       </div>
     </div>
 
-    <!-- Panel 2: Guest & Booking Management (COMBINED FUNCTIONALITY) -->
     <div id="guest-booking" class="tab-panel">
-      <h2 class="text-3xl font-semibold text-gray-800 mb-6">Guest & Booking Management</h2>
+      <h2 class="text-3xl font-bold text-gray-800 mb-8 border-b pb-3">Single-Step Guest Check-in</h2>
 
-      <!-- Section A: Guest Registration -->
-      <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
-        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Step 1: Register New Guest (or Use Existing)
-        </h3>
-        <form id="register-guest-form" class="space-y-4 mb-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="text" id="guest-first-name" placeholder="First Name"
-              class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500" required>
-            <input type="text" id="guest-last-name" placeholder="Last Name"
-              class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500" required>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="email" id="guest-email" placeholder="Email"
-              class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500" required>
-            <input type="text" id="guest-phone" placeholder="Phone Number (Optional)"
-              class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500">
-          </div>
-          <input type="text" id="guest-id-proof" placeholder="ID Proof (e.g., Passport No.)"
-            class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500" required>
-          <input type="text" id="guest-address" placeholder="Address (Optional)"
-            class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500">
+      <form id="create-reservation-form" class="space-y-6">
 
-          <button type="submit"
-            class="py-3 px-6 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition duration-150">Register
-            New Guest</button>
-          <p id="guest-register-message" class="mt-4 text-sm hidden"></p>
-        </form>
-      </div>
-
-      <!-- Section B: Create Reservation -->
-      <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
-        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Step 2: Create Reservation</h3>
-        <form id="create-reservation-form" class="space-y-4 mb-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Guest Selection -->
-            <div>
-              <label for="res-guest-id" class="block text-sm font-medium text-gray-700">Guest (Select from existing
-                list)</label>
-              <select id="res-guest-id" class="w-full border p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+        <div class="bg-white p-6 rounded-xl shadow-xl border border-blue-100">
+          <h3 class="text-2xl font-bold text-blue-700 mb-4 pb-2 border-b">1. Guest Registration</h3>
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input type="text" id="guest-first-name" placeholder="First Name (Required)"
+                class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm"
                 required>
-                <option value="">Loading Guests...</option>
-              </select>
+              <input type="text" id="guest-last-name" placeholder="Last Name (Required)"
+                class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm"
+                required>
             </div>
-            <!-- Room Selection -->
-            <div>
-              <label for="res-room-number" class="block text-sm font-medium text-gray-700">Available Room</label>
-              <select id="res-room-number"
-                class="w-full border p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-                <option value="">Loading Rooms...</option>
-              </select>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input type="email" id="guest-email" placeholder="Email (Required)"
+                class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm"
+                required>
+              <input type="text" id="guest-phone" placeholder="Phone Number (Optional)"
+                class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm">
             </div>
+            <input type="text" id="guest-id-proof" placeholder="ID Proof (e.g., Passport No.) (Required)"
+              class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm"
+              required>
+            <input type="text" id="guest-address" placeholder="Address (Optional)"
+              class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm">
           </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="res-check-in" class="block text-sm font-medium text-gray-700">Check-In Date</label>
-              <input type="date" id="res-check-in"
-                class="w-full border p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-            </div>
-            <div>
-              <label for="res-check-out" class="block text-sm font-medium text-gray-700">Check-Out Date</label>
-              <input type="date" id="res-check-out"
-                class="w-full border p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <input type="number" id="res-adults" placeholder="Adults (e.g., 2)"
-              class="w-full border p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500" value="1" min="1" required>
-            <input type="number" id="res-children" placeholder="Children (e.g., 0)"
-              class="w-full border p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500" value="0" min="0">
-            <input type="number" step="0.01" id="res-price-per-night" placeholder="Price Per Night"
-              class="w-full border p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-          </div>
-
-          <button type="submit"
-            class="py-3 px-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-150">Create
-            Reservation</button>
-          <p id="reservation-message" class="mt-4 text-sm hidden"></p>
-        </form>
-      </div>
-
-      <!-- Section C: Guest Lookup Table -->
-      <div class="bg-white p-6 rounded-xl shadow-lg mt-8">
-        <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Guest Lookup & History</h3>
-        <p id="guest-lookup-message" class="mt-4 text-sm hidden mb-4"></p>
-
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Proof</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="guest-table-body" class="bg-white divide-y divide-gray-200">
-              <!-- Data loaded by JS -->
-            </tbody>
-          </table>
         </div>
-      </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-xl border border-green-100">
+          <h3 class="text-2xl font-bold text-green-700 mb-4 pb-2 border-b">2. Room & Stay Details</h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label for="res-room-type" class="block text-sm font-medium text-gray-700 mb-1">Required Room Type</label>
+              <select id="res-room-type"
+                class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm"
+                required>
+                <option value="" disabled selected>Loading Room Types...</option>
+              </select>
+            </div>
+            <div>
+              <label for="res-base-price-display" class="block text-sm font-medium text-gray-700 mb-1">Base Price Per
+                Night</label>
+              <p id="res-base-price-display"
+                class="w-full border p-3 rounded-lg bg-gray-100 text-gray-800 font-extrabold text-lg">₹0.00</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label for="res-room-number" class="block text-sm font-medium text-gray-700 mb-1">Available Room #</label>
+              <select id="res-room-number"
+                class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm"
+                required disabled>
+                <option value="" disabled selected>Select Room Type first</option>
+              </select>
+            </div>
+            <div>
+              <label for="res-check-in" class="block text-sm font-medium text-gray-700 mb-1">Check-In Date</label>
+              <input type="date" id="res-check-in"
+                class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm"
+                required>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label for="res-check-out" class="block text-sm font-medium text-gray-700 mb-1">Check-Out Date</label>
+              <input type="date" id="res-check-out"
+                class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm"
+                required>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="res-adults" class="block text-sm font-medium text-gray-700 mb-1">Adults</label>
+                <input type="number" id="res-adults" placeholder="e.g., 2"
+                  class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm"
+                  value="1" min="1" required>
+              </div>
+              <div>
+                <label for="res-children" class="block text-sm font-medium text-gray-700 mb-1">Children</label>
+                <input type="number" id="res-children" placeholder="e.g., 0"
+                  class="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-100 shadow-sm"
+                  value="0" min="0">
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="pt-4">
+          <button type="submit"
+            class="py-3 px-8 bg-indigo-600 text-white font-bold rounded-full text-lg hover:bg-indigo-700 transition duration-200 shadow-lg hover:shadow-xl">
+            Complete Check-in & Reserve
+          </button>
+          <p id="reservation-message" class="mt-4 text-sm hidden font-semibold"></p>
+        </div>
+      </form>
     </div>
 
-    <!-- Panel 3: Check-out & Billing Workflow (Functional READ & PUT) -->
-    <div id="billing-checkout" class="tab-panel">
-      <h2 class="text-3xl font-semibold text-gray-800 mb-6">Check-out & Billing (Occupied Rooms)</h2>
-      <div class="bg-white p-6 rounded-xl shadow-lg">
-        <h3 class="text-xl font-semibold text-gray-700 mb-4">Guests Checked In (Occupied Rooms)</h3>
-        <p id="occupied-rooms-message" class="mt-4 text-sm hidden mb-4"></p>
+    <div id="guest-management" class="tab-panel">
+      <h2 class="text-3xl font-bold text-gray-800 mb-8 border-b pb-3">Active Guest & Room Management</h2>
+      <div class="bg-white p-6 rounded-xl shadow-xl">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4">Guests Currently Checked In</h3>
+        <p id="occupied-rooms-message" class="mt-4 text-sm hidden mb-4 font-semibold"></p>
+        <p class="text-sm text-red-600 mb-6 p-3 bg-red-50 rounded-lg border border-red-200">
+          <span class="font-bold">IMPORTANT:</span> Guest records are temporary and are **automatically deleted** upon
+          check-out.
+        </p>
 
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto shadow-md rounded-lg">
           <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+            <thead class="bg-indigo-100">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room #</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">Room #</th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">Guest ID</th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">Guest Name
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">Check-out
+                  Date</th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody id="occupied-rooms-table-body" class="bg-white divide-y divide-gray-200">
-              <!-- Data loaded by JS -->
+            <tbody id="occupied-rooms-table-body" class="bg-white divide-y divide-gray-100">
             </tbody>
           </table>
         </div>
@@ -234,30 +265,117 @@
 
   </main>
 
+  <div id="edit-guest-modal" class="modal-backdrop hidden">
+    <div
+      class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg mx-4 transform transition-all duration-300 scale-100">
+      <h3 class="text-2xl font-bold text-indigo-700 mb-6 border-b pb-2">Edit Guest Details (<span
+          id="modal-guest-id"></span>)</h3>
+      <form id="edit-guest-form" class="space-y-4">
+        <input type="hidden" id="edit-guest-id">
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">First Name</label>
+            <input type="text" id="edit-first-name"
+              class="w-full border p-2 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-100"
+              required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Last Name</label>
+            <input type="text" id="edit-last-name"
+              class="w-full border p-2 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-100"
+              required>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Email</label>
+          <input type="email" id="edit-email"
+            class="w-full border p-2 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-100"
+            required>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+          <input type="text" id="edit-phone"
+            class="w-full border p-2 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-100">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">ID Proof (Required)</label>
+          <input type="text" id="edit-id-proof"
+            class="w-full border p-2 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-100"
+            required>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Address</label>
+          <input type="text" id="edit-address"
+            class="w-full border p-2 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-100">
+        </div>
+
+        <p id="edit-guest-message" class="text-sm pt-2 hidden font-semibold"></p>
+
+        <div class="flex justify-end space-x-3 mt-6">
+          <button type="button" onclick="closeEditGuestModal()"
+            class="py-2 px-4 bg-gray-200 text-gray-700 font-semibold rounded-full hover:bg-gray-300 transition duration-150 shadow-md">Cancel</button>
+          <button type="submit"
+            class="py-2 px-4 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700 transition duration-150 shadow-md">Save
+            Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
   <script>
     const API_BASE_URL = 'http://127.0.0.1:5000/api';
 
     // DOM Elements
-    const registerGuestForm = document.getElementById('register-guest-form');
-    const guestRegisterMessage = document.getElementById('guest-register-message');
-    const guestLookupMessage = document.getElementById('guest-lookup-message');
-    const guestTableBody = document.getElementById('guest-table-body');
     const roomGrid = document.getElementById('room-grid');
     const roomViewMessage = document.getElementById('room-view-message');
     const createReservationForm = document.getElementById('create-reservation-form');
     const reservationMessage = document.getElementById('reservation-message');
-    const resGuestIdSelect = document.getElementById('res-guest-id');
+    const resRoomTypeSelect = document.getElementById('res-room-type');
     const resRoomNumberSelect = document.getElementById('res-room-number');
     const occupiedRoomsTableBody = document.getElementById('occupied-rooms-table-body');
     const occupiedRoomsMessage = document.getElementById('occupied-rooms-message');
+    const resBasePriceDisplay = document.getElementById('res-base-price-display');
 
-    // Store active reservations (for checkout logic later)
-    let activeReservations = [];
+    // Guest Registration Inputs (simplified)
+    const guestFirstName = document.getElementById('guest-first-name');
+    const guestLastName = document.getElementById('guest-last-name');
+    const guestEmail = document.getElementById('guest-email');
+    const guestPhone = document.getElementById('guest-phone');
+    const guestIdProof = document.getElementById('guest-id-proof');
+    const guestAddress = document.getElementById('guest-address');
+
+    // Modal Elements
+    const editGuestModal = document.getElementById('edit-guest-modal');
+    const editGuestForm = document.getElementById('edit-guest-form');
+    const editGuestId = document.getElementById('edit-guest-id');
+    const modalGuestIdDisplay = document.getElementById('modal-guest-id');
+    const editFirstName = document.getElementById('edit-first-name');
+    const editLastName = document.getElementById('edit-last-name');
+    const editEmail = document.getElementById('edit-email');
+    const editPhone = document.getElementById('edit-phone');
+    const editIdProof = document.getElementById('edit-id-proof');
+    const editAddress = document.getElementById('edit-address');
+    const editGuestMessage = document.getElementById('edit-guest-message');
+
+
+    // Global data store
+    // CHANGE: allRoomData now stores results from /api/rooms-details
+    let allRoomData = [];
+    let allReservationData = [];
+    let allGuestData = [];
+    let allRoomTypes = [];
+
 
     // --- Utility Functions ---
     function displayMessage(el, text, isError = false) {
       el.textContent = text;
-      el.classList.remove('hidden', 'text-green-600', 'text-red-600', 'text-gray-500', 'text-blue-600');
+      el.classList.remove('hidden', 'text-green-600', 'text-red-600', 'text-gray-500', 'text-blue-600', 'text-indigo-600');
       el.classList.add(isError ? 'text-red-600' : 'text-green-600');
       el.classList.remove('opacity-0');
       el.classList.add('opacity-100');
@@ -265,9 +383,27 @@
 
     // --- ROOM STATUS LOGIC (Panel 1) ---
 
+    // New function to handle status change from the dashboard buttons
+    window.handleStatusUpdate = async function (roomNumber, newStatus) {
+      // Note: We skip confirmation to adhere to the rule of avoiding alert/confirm.
+      console.log(`Attempting to change Room ${roomNumber} status to '${newStatus}'...`);
+
+      // Call the existing status update function
+      const success = await updateRoomStatus(roomNumber, newStatus);
+
+      if (success) {
+        console.log(`Room ${roomNumber} status successfully updated to ${newStatus}.`);
+      } else {
+        console.error(`Failed to update Room ${roomNumber} status.`);
+      }
+
+      // Refresh the dashboard data
+      refreshAllData();
+    }
+
+
     function getRoomCardClass(status) {
-      const normalizedStatus = status.replace(/\s/g, '-');
-      return `status-${normalizedStatus}`;
+      return status.replace(/\s/g, '-');
     }
 
     async function fetchRooms() {
@@ -276,158 +412,233 @@
       roomViewMessage.classList.remove('hidden');
 
       try {
-        const response = await fetch(`${API_BASE_URL}/rooms`);
+        // CHANGE: Use the new /api/rooms-details endpoint
+        const response = await fetch(`${API_BASE_URL}/rooms-details`);
         const data = await response.json();
 
         if (response.ok) {
-          roomViewMessage.classList.add('hidden');
-          if (data.length === 0) {
-            displayMessage(roomViewMessage, 'No rooms registered in the system.', false);
-            roomViewMessage.classList.remove('hidden');
-            return;
-          }
-
-          data.forEach(room => {
-            const cardClass = getRoomCardClass(room.currentStatus);
-            const card = document.createElement('div');
-            card.className = `room-status-card p-4 rounded-xl shadow-md border-l-4 font-semibold ${cardClass}`;
-            card.innerHTML = `
-                            <p class="text-lg font-extrabold">${room.roomNumber}</p>
-                            <p class="text-xs font-normal opacity-75">${room.currentStatus}</p>
-                            <p class="text-xs mt-1">Floor: ${room.floorNumber}</p>
-                        `;
-            roomGrid.appendChild(card);
-          });
+          allRoomData = data;
         } else {
+          allRoomData = [];
           displayMessage(roomViewMessage, `Error fetching rooms: ${data.error || 'Unknown API Error'}`, true);
+          return;
         }
+
+        roomViewMessage.classList.add('hidden');
+        if (data.length === 0) {
+          displayMessage(roomViewMessage, 'No rooms registered in the system.', false);
+          roomViewMessage.classList.remove('hidden');
+          return;
+        }
+
+        data.forEach(room => {
+          const normalizedStatus = getRoomCardClass(room.currentStatus);
+          const cardClass = `status-${normalizedStatus}`;
+
+          // FIX: Use room.roomType which is now correctly retrieved via the new endpoint
+          const roomTypeDisplay = room.roomType || 'Unknown Type';
+
+          let buttonHtml = '';
+
+          // Button to mark cleaned -> Available
+          if (room.currentStatus === 'Needs Cleaning') {
+            buttonHtml = `
+								<button onclick="handleStatusUpdate(${room.roomNumber}, 'Available')"
+									class="mt-3 w-full py-1.5 px-3 text-xs font-semibold rounded-full bg-green-600 text-white hover:bg-green-700 transition duration-150 shadow-md">
+									Mark as Cleaned
+								</button>`;
+          }
+          // Button to exit maintenance -> Available
+          else if (room.currentStatus === 'Maintenance') {
+            buttonHtml = `
+								<button onclick="handleStatusUpdate(${room.roomNumber}, 'Available')"
+									class="mt-3 w-full py-1.5 px-3 text-xs font-semibold rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition duration-150 shadow-md">
+									Maintenance Done
+								</button>`;
+          }
+          // NEW: Button to send available room to maintenance
+          else if (room.currentStatus === 'Available') {
+            buttonHtml = `
+								<button onclick="handleStatusUpdate(${room.roomNumber}, 'Maintenance')"
+									class="mt-3 w-full py-1.5 px-3 text-xs font-semibold rounded-full bg-yellow-600 text-white hover:bg-yellow-700 transition duration-150 shadow-md">
+									Go for Maintenance
+								</button>`;
+          }
+          // Occupied rooms will have no buttons here, as per requirements (only checkout).
+
+          const card = document.createElement('div');
+
+          // Updated card structure for better aesthetics
+          card.className = `room-status-card p-5 rounded-xl shadow-lg border-l-6 bg-white ${cardClass}`;
+          card.innerHTML = `
+							<div class="flex justify-between items-start mb-2">
+								<span class="text-4xl font-extrabold text-gray-800">${room.roomNumber}</span>
+								<span class="status-pill ${cardClass}">${room.currentStatus}</span>
+							</div>
+							<p class="text-sm font-bold text-gray-700 mb-1">${roomTypeDisplay}</p>
+							<p class="text-xs text-gray-500">Floor: ${room.floorNumber}</p>
+							${buttonHtml} `;
+          roomGrid.appendChild(card);
+        });
       } catch (error) {
-        displayMessage(roomViewMessage, 'Network Error: Could not connect to the Flask server.', true);
+        // Clear data and show network error
+        allRoomData = [];
+        displayMessage(roomViewMessage, 'Network Error: Could not connect to the Flask server. Check server console.', true);
         console.error('Fetch rooms failed:', error);
       }
     }
 
-    // --- GUEST MANAGEMENT LOGIC (Panel 2) ---
+    // --- GUEST DATA LOGIC ---
 
     async function fetchGuests() {
-      guestTableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-400">Fetching guest list...</td></tr>';
-      displayMessage(guestLookupMessage, '', false);
-
       try {
         const response = await fetch(`${API_BASE_URL}/guests`);
-        const data = await response.json();
-
         if (response.ok) {
-          renderGuestTable(data);
-          return data; // Return data for reservation form
+          allGuestData = await response.json();
         } else {
-          renderGuestTable([]);
-          displayMessage(guestLookupMessage, `Error fetching guests: ${data.error || 'Unknown API Error'}`, true);
-          return [];
+          allGuestData = [];
         }
       } catch (error) {
-        renderGuestTable([]);
-        displayMessage('guest-lookup-message', 'Network Error: Could not connect to backend to fetch guests.', true); // Corrected ID usage
         console.error('Fetch guests failed:', error);
-        return [];
+        allGuestData = [];
       }
     }
 
-    function renderGuestTable(guestData) {
-      if (guestData.length === 0) {
-        guestTableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-400">No guests found. Please register a new guest above.</td></tr>';
+    function getGuestById(guestID) {
+      return allGuestData.find(g => g.guestID === guestID);
+    }
+
+    // --- RESERVATION DATA LOGIC ---
+
+    async function fetchReservations() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/reservations`);
+        if (response.ok) {
+          allReservationData = await response.json();
+        } else {
+          allReservationData = [];
+        }
+      } catch (error) {
+        console.error("Failed to fetch reservations:", error);
+        allReservationData = [];
+      }
+    }
+
+    // --- ROOM TYPE LOGIC ---
+
+    async function fetchRoomTypes() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/room-types`);
+        const data = await response.json();
+        if (response.ok) {
+          allRoomTypes = data;
+        } else {
+          allRoomTypes = [];
+          console.error('Error fetching room types:', data.error);
+        }
+      } catch (error) {
+        console.error('Network Error fetching room types:', error);
+        allRoomTypes = [];
+      }
+    }
+
+
+    // Function to populate the Room Type Dropdown using the dedicated endpoint data
+    function populateRoomTypeDropdown() {
+      resRoomTypeSelect.innerHTML = '<option value="" disabled selected>Select Room Type</option>';
+      resRoomNumberSelect.innerHTML = '<option value="" disabled selected>Select Room Type first</option>';
+      resRoomNumberSelect.disabled = true;
+      resBasePriceDisplay.textContent = '₹0.00';
+
+      if (allRoomTypes.length > 0) {
+        allRoomTypes.forEach(type => {
+          const option = document.createElement('option');
+          // IMPORTANT: Use roomTypeID as the value
+          option.value = type.roomTypeID;
+          option.textContent = type.typeName;
+          // Store the base price on the element for easy access
+          option.dataset.basePrice = type.basePrice;
+          resRoomTypeSelect.appendChild(option);
+        });
+      } else {
+        resRoomTypeSelect.innerHTML = '<option value="" disabled selected>No Room Types Found</option>';
+      }
+    }
+
+    // Function to populate Available Rooms based on selected type
+    async function populateAvailableRoomsByType() {
+      const selectedOption = resRoomTypeSelect.options[resRoomTypeSelect.selectedIndex];
+      // Note: roomTypeId is used to query the dedicated available rooms endpoint
+      const roomTypeId = selectedOption.value;
+      const basePrice = selectedOption.dataset.basePrice;
+
+      resRoomNumberSelect.innerHTML = '<option value="" disabled selected>Loading Available Rooms...</option>';
+      resRoomNumberSelect.disabled = true;
+      resBasePriceDisplay.textContent = `₹${parseFloat(basePrice || 0).toFixed(2)}`;
+
+      if (!roomTypeId) {
+        resRoomNumberSelect.innerHTML = '<option value="" disabled selected>Select Room Type first</option>';
         return;
       }
 
-      guestTableBody.innerHTML = guestData.map(guest => `
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${guest.guestID}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${guest.firstName} ${guest.lastName}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${guest.email}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-indigo-600">${guest.idProof}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <!-- Actions buttons are placeholders until PUT/DELETE logic is built -->
-                        <button class="text-green-600 hover:text-green-900 mr-2">Edit</button>
-                        <button class="text-red-600 hover:text-red-900">Delete</button>
-                    </td>
-                </tr>
-            `).join('');
-    }
-
-    registerGuestForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      displayMessage(guestRegisterMessage, 'Processing registration...', false);
-
-      const guestData = {
-        firstName: document.getElementById('guest-first-name').value,
-        lastName: document.getElementById('guest-last-name').value,
-        email: document.getElementById('guest-email').value,
-        phoneNumber: document.getElementById('guest-phone').value || null,
-        idProof: document.getElementById('guest-id-proof').value,
-        address: document.getElementById('guest-address').value || null
-      };
-
       try {
-        const response = await fetch(`${API_BASE_URL}/guests`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(guestData)
-        });
-
+        // CALLING THE DEDICATED /api/rooms/available ENDPOINT
+        const response = await fetch(`${API_BASE_URL}/rooms/available?roomTypeId=${roomTypeId}`);
         const result = await response.json();
 
-        if (response.ok) {
-          displayMessage(guestRegisterMessage, `Success! Guest registered with ID: ${result.guestID}.`, false);
-          registerGuestForm.reset();
-          fetchGuests(); // Refresh the lookup table
-          // Re-fetch all dropdown data since a new guest was added
-          populateReservationForm();
+        resRoomNumberSelect.innerHTML = '<option value="" disabled selected>Select Room #</option>';
+
+        if (response.ok && Array.isArray(result) && result.length > 0) {
+          result.forEach(room => {
+            // Find additional details (like floor number) from the allRoomData array
+            const roomInfo = allRoomData.find(r => r.roomNumber === room.roomNumber);
+            const floor = roomInfo ? ` (Floor ${roomInfo.floorNumber})` : '';
+
+            const option = document.createElement('option');
+            option.value = room.roomNumber;
+            option.textContent = `${room.roomNumber}${floor}`;
+            resRoomNumberSelect.appendChild(option);
+          });
+          resRoomNumberSelect.disabled = false;
         } else {
-          displayMessage(guestRegisterMessage, `Registration failed: ${result.error || 'Check required fields.'}`, true);
+          resRoomNumberSelect.innerHTML = `<option value="" disabled selected>No rooms available for this type</option>`;
+          resRoomNumberSelect.disabled = true;
         }
       } catch (error) {
-        displayMessage(guestRegisterMessage, 'Network Error: Could not connect to the backend server.', true);
-        console.error('Registration failed:', error);
+        console.error("Failed to fetch available rooms:", error);
+        resRoomNumberSelect.innerHTML = `<option value="" disabled selected>Error fetching rooms</option>`;
+        resRoomNumberSelect.disabled = true;
       }
-    });
+    }
 
-    // --- RESERVATION LOGIC (Merged into Panel 2) ---
+    // Event listener for Room Type change: triggers the filtering of room numbers
+    resRoomTypeSelect.addEventListener('change', populateAvailableRoomsByType);
 
-    async function populateReservationForm() {
-      resGuestIdSelect.innerHTML = '<option value="">Loading Guests...</option>';
-      resRoomNumberSelect.innerHTML = '<option value="">Loading Rooms...</option>';
+    // --- RESERVATION CREATION (Panel 2) ---
 
-      // 1. Fetch all Guests
-      const guestResponse = await fetch(`${API_BASE_URL}/guests`);
-      const guests = guestResponse.ok ? await guestResponse.json() : [];
+    // Function to handle new guest registration
+    async function registerNewGuest() {
+      const guestData = {
+        firstName: guestFirstName.value,
+        lastName: guestLastName.value,
+        email: guestEmail.value,
+        phoneNumber: guestPhone.value || null,
+        idProof: guestIdProof.value,
+        address: guestAddress.value || null
+      };
 
-      resGuestIdSelect.innerHTML = '<option value="" disabled selected>Select Guest (ID - Name)</option>';
-      if (guests.length > 0) {
-        guests.forEach(guest => {
-          const option = document.createElement('option');
-          option.value = guest.guestID;
-          option.textContent = `${guest.guestID} - ${guest.firstName} ${guest.lastName}`;
-          resGuestIdSelect.appendChild(option);
-        });
+      const response = await fetch(`${API_BASE_URL}/guests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(guestData)
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        // Return the newly created guest ID
+        return result.guestID;
       } else {
-        resGuestIdSelect.innerHTML = '<option value="" disabled selected>No Guests Found. Register First.</option>';
-      }
-
-      // 2. Fetch Available Rooms
-      const roomResponse = await fetch(`${API_BASE_URL}/rooms`);
-      const allRooms = roomResponse.ok ? await roomResponse.json() : [];
-      const availableRooms = allRooms.filter(room => room.currentStatus === 'Available');
-
-      resRoomNumberSelect.innerHTML = '<option value="" disabled selected>Select Available Room</option>';
-      if (availableRooms.length > 0) {
-        availableRooms.forEach(room => {
-          const option = document.createElement('option');
-          option.value = room.roomNumber;
-          option.textContent = `${room.roomNumber} (Floor ${room.floorNumber})`;
-          resRoomNumberSelect.appendChild(option);
-        });
-      } else {
-        resRoomNumberSelect.innerHTML = '<option value="" disabled selected>No Rooms Available</option>';
+        throw new Error(`Registration failed: ${result.error || 'Check required fields.'}`);
       }
     }
 
@@ -442,18 +653,19 @@
         const result = await response.json();
 
         if (response.ok) {
-          // Update Room Status to Occupied (Check-in happens immediately upon booking)
+          // Step 3: Update Room Status to Occupied (Check-in)
+          // Uses the original /api/rooms/<room_number> PUT endpoint
           await updateRoomStatus(reservationData.roomNumber, 'Occupied');
 
           displayMessage(reservationMessage,
-            `Success! Reservation created with ID: ${result.reservationID}. Room ${reservationData.roomNumber} is now OCCUPIED.`,
+            `Success! New guest registered and checked into Room ${reservationData.roomNumber}.`,
             false);
           createReservationForm.reset();
+          // Re-trigger dropdown logic to clear selection
+          populateRoomTypeDropdown();
 
           // Refresh all affected modules
-          fetchRooms();
-          fetchOccupiedRooms();
-          populateReservationForm();
+          refreshAllData();
 
         } else {
           displayMessage(reservationMessage, `Reservation failed: ${result.error || 'Check server logs.'}`, true);
@@ -464,9 +676,108 @@
       }
     }
 
+    createReservationForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      displayMessage(reservationMessage, 'Processing registration and reservation...', false);
+
+      try {
+        // Step 1: Register New Guest
+        const finalGuestID = await registerNewGuest();
+
+        // Step 2: Prepare Reservation Data
+        const today = new Date().toISOString().split('T')[0];
+
+        // Currency change: replace '₹' for extraction
+        const basePriceText = resBasePriceDisplay.textContent;
+        const pricePerNight = parseFloat(basePriceText.replace('₹', ''));
+
+
+        const reservationData = {
+          guestID: finalGuestID,
+          roomNumber: parseInt(resRoomNumberSelect.value),
+          checkInDate: document.getElementById('res-check-in').value,
+          checkOutDate: document.getElementById('res-check-out').value,
+          bookingDate: today,
+          numberOfAdults: parseInt(document.getElementById('res-adults').value),
+          numberOfChildren: parseInt(document.getElementById('res-children').value),
+          reservationStatus: 'Checked-in',
+          pricePerNight: pricePerNight // Use the correctly parsed price
+        };
+
+        // Step 3: Create Reservation & Check-in
+        await createReservation(reservationData);
+
+      } catch (error) {
+        displayMessage(reservationMessage, `Error: ${error.message}`, true);
+        console.error('Combined reservation process failed:', error);
+      }
+    });
+
+
+    // --- ACTIVE GUEST MANAGEMENT (Panel 3) ---
+
+    async function fetchActiveGuestsAndRooms() {
+      occupiedRoomsTableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-400">Loading active guests...</td></tr>';
+      displayMessage(occupiedRoomsMessage, '', false);
+
+      try {
+        // Data fetch is handled by refreshAllData() before this is called.
+
+        // Filter active rooms (Occupied)
+        const occupiedRooms = allRoomData.filter(room => room.currentStatus === 'Occupied');
+
+        if (occupiedRooms.length === 0) {
+          occupiedRoomsTableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-400 bg-white">No rooms currently occupied.</td></tr>';
+          return;
+        }
+
+        occupiedRoomsTableBody.innerHTML = occupiedRooms.map((room, index) => {
+          // Find the active reservation using the room number
+          const activeReservation = allReservationData.find(res =>
+            res.roomNumber === room.roomNumber && res.reservationStatus === 'Checked-in'
+          );
+
+          if (!activeReservation) return ''; // Should not happen if room is 'Occupied'
+
+          const guest = getGuestById(activeReservation.guestID);
+          const guestID = guest ? guest.guestID : 'N/A';
+          const guestName = guest ? `${guest.firstName} ${guest.lastName}` : 'Guest Data Missing';
+          const checkoutDate = activeReservation.checkOutDate;
+
+          // Add striped table styling: even:bg-gray-50
+          const rowClass = index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100';
+
+
+          return `
+						<tr class="${rowClass} transition duration-150">
+							<td class="px-6 py-4 whitespace-nowrap text-sm font-extrabold text-red-600">${room.roomNumber}</td>
+							<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${guestID}</td>
+							<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-semibold">${guestName}</td>
+							<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${checkoutDate}</td>
+							<td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+								<button onclick="openEditGuestModal(${guestID})" 
+									class="py-1 px-3 bg-indigo-500 text-white rounded-full text-xs font-semibold hover:bg-indigo-600 transition duration-150 shadow-sm">
+									Edit Guest
+								</button>
+								<button onclick="startCheckout(${room.roomNumber})" 
+									class="py-1 px-3 bg-red-500 text-white rounded-full text-xs font-semibold hover:bg-red-600 transition duration-150 shadow-sm">
+									Check Out
+								</button>
+							</td>
+						</tr>
+					`;
+        }).join('');
+
+      } catch (error) {
+        occupiedRoomsTableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-600 bg-white">Error loading data.</td></tr>';
+        console.error('Fetch active guests failed:', error);
+      }
+    }
+
     async function updateRoomStatus(roomNumber, newStatus) {
       const updateData = { currentStatus: newStatus };
       try {
+        // Uses the original /api/rooms/<room_number> PUT endpoint
         const response = await fetch(`${API_BASE_URL}/rooms/${roomNumber}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -479,83 +790,139 @@
       }
     }
 
-    createReservationForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      displayMessage(reservationMessage, 'Processing reservation...', false);
+    async function findActiveReservationForRoom(roomNumber) {
+      await fetchReservations(); // Ensure latest data
+      return allReservationData.find(res =>
+        res.roomNumber === roomNumber && res.reservationStatus === 'Checked-in'
+      );
+    }
 
-      const today = new Date().toISOString().split('T')[0];
-
-      const reservationData = {
-        guestID: parseInt(resGuestIdSelect.value),
-        roomNumber: parseInt(resRoomNumberSelect.value),
-        checkInDate: document.getElementById('res-check-in').value,
-        checkOutDate: document.getElementById('res-check-out').value,
-        bookingDate: today,
-        numberOfAdults: parseInt(document.getElementById('res-adults').value),
-        numberOfChildren: parseInt(document.getElementById('res-children').value),
-        reservationStatus: 'Checked-in', // Assuming immediate check-in for simplification
-        pricePerNight: parseFloat(document.getElementById('res-price-per-night').value)
-      };
-
-      await createReservation(reservationData);
-    });
-
-    // --- CHECK-OUT LOGIC (Panel 3) ---
-
-    async function fetchOccupiedRooms() {
-      occupiedRoomsTableBody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-gray-400">Loading occupied rooms...</td></tr>';
-      displayMessage(occupiedRoomsMessage, '', false);
-
+    async function deleteGuest(guestID) {
       try {
-        const response = await fetch(`${API_BASE_URL}/rooms`);
-        const allRooms = response.ok ? await response.json() : [];
-
-        // Filter rooms that are currently occupied
-        const occupiedRooms = allRooms.filter(room => room.currentStatus === 'Occupied');
-
-        if (occupiedRooms.length === 0) {
-          occupiedRoomsTableBody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-gray-400">No rooms currently occupied.</td></tr>';
-          return;
-        }
-
-        occupiedRoomsTableBody.innerHTML = occupiedRooms.map(room => `
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">${room.roomNumber}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${room.currentStatus}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button onclick="startCheckout(${room.roomNumber})" class="py-1 px-3 bg-yellow-500 text-white rounded-lg text-xs hover:bg-yellow-600 transition duration-150">Start Checkout</button>
-                        </td>
-                    </tr>
-                `).join('');
-
+        const response = await fetch(`${API_BASE_URL}/guests/${guestID}`, {
+          method: 'DELETE',
+        });
+        return response.ok;
       } catch (error) {
-        occupiedRoomsTableBody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-red-600">Error loading data.</td></tr>';
-        console.error('Fetch occupied rooms failed:', error);
+        console.error(`Failed to delete guest ${guestID}:`, error);
+        return false;
       }
     }
 
-    async function startCheckout(roomNumber) {
-      // Note: document.execCommand('copy') is generally preferred over alert/confirm
-      // We use confirm here for simplicity as a temporary measure.
-      if (!confirm(`Are you sure you want to CHECK OUT guest from Room ${roomNumber}? This will mark the room for cleaning.`)) {
+    window.startCheckout = async function (roomNumber) {
+      // 1. Find the active reservation for this room
+      const activeReservation = await findActiveReservationForRoom(roomNumber);
+      if (!activeReservation) {
+        displayMessage(occupiedRoomsMessage, `Error: No active reservation found for Room ${roomNumber}. Cannot proceed.`, true);
         return;
       }
+      const guestIDToDelete = activeReservation.guestID;
 
-      // 1. Mark Room for Cleaning (Simulated checkout process)
-      const success = await updateRoomStatus(roomNumber, 'Needs Cleaning');
+      displayMessage(occupiedRoomsMessage, `Processing checkout for Room ${roomNumber} (Guest ID: ${guestIDToDelete})...`, false);
 
-      if (success) {
-        // 2. Fetch Reservations to find the one associated with this room (Future feature: Update RESERVATION status to 'Completed')
+      // 2. Mark Room for Cleaning
+      const roomUpdateSuccess = await updateRoomStatus(roomNumber, 'Needs Cleaning');
 
-        // 3. Display success message and refresh tables
-        displayMessage(occupiedRoomsMessage, `Checkout initiated for Room ${roomNumber}. Room status updated to 'Needs Cleaning'.`, false);
+      if (roomUpdateSuccess) {
+        // 3. Delete Guest Record
+        const guestDeleteSuccess = await deleteGuest(guestIDToDelete);
 
-        fetchRooms();
-        fetchOccupiedRooms();
-        populateReservationForm();
+        if (guestDeleteSuccess) {
+          displayMessage(occupiedRoomsMessage,
+            `Checkout success! Room ${roomNumber} now 'Needs Cleaning'. Guest (ID: ${guestIDToDelete}) has been deleted.`,
+            false
+          );
+        } else {
+          displayMessage(occupiedRoomsMessage,
+            `Room checkout successful, but **FAILED to delete Guest** (ID: ${guestIDToDelete}). Check API.`,
+            true
+          );
+        }
       } else {
         displayMessage(occupiedRoomsMessage, `Failed to update room status for checkout.`, true);
       }
+
+      // 4. Refresh all affected modules
+      refreshAllData();
+    }
+
+    // --- EDIT GUEST MODAL FUNCTIONS ---
+
+    window.openEditGuestModal = function (guestID) {
+      const guest = getGuestById(guestID);
+      editGuestMessage.classList.add('hidden'); // Clear previous messages
+
+      if (guest) {
+        editGuestId.value = guest.guestID;
+        modalGuestIdDisplay.textContent = guest.guestID;
+        editFirstName.value = guest.firstName;
+        editLastName.value = guest.lastName;
+        editEmail.value = guest.email;
+        editPhone.value = guest.phoneNumber || '';
+        editIdProof.value = guest.idProof;
+        editAddress.value = guest.address || '';
+        editGuestModal.classList.remove('hidden');
+      } else {
+        displayMessage(occupiedRoomsMessage, `Error: Could not find guest with ID ${guestID}.`, true);
+      }
+    }
+
+    window.closeEditGuestModal = function () {
+      editGuestModal.classList.add('hidden');
+      editGuestForm.reset();
+    }
+
+    editGuestForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const guestID = editGuestId.value;
+      displayMessage(editGuestMessage, 'Saving changes...', false);
+      editGuestMessage.classList.remove('hidden');
+
+      const updatedData = {
+        firstName: editFirstName.value,
+        lastName: editLastName.value,
+        email: editEmail.value,
+        phoneNumber: editPhone.value || null,
+        idProof: editIdProof.value,
+        address: editAddress.value || null
+      };
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/guests/${guestID}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          displayMessage(editGuestMessage, 'Guest details updated successfully!', false);
+          setTimeout(closeEditGuestModal, 1500);
+          refreshAllData(); // Refresh the main table after successful update
+        } else {
+          displayMessage(editGuestMessage, `Update failed: ${result.error || 'Check required fields.'}`, true);
+        }
+      } catch (error) {
+        displayMessage(editGuestMessage, 'Network Error: Failed to connect to server.', true);
+        console.error('Guest update failed:', error);
+      }
+    });
+
+    // --- GLOBAL INITIALIZATION AND REFRESH ---
+
+    async function refreshAllData() {
+      // CHANGE: Fetch all room details (including type name) from the new endpoint
+      await fetchRooms();
+      await fetchRoomTypes();
+
+      // Load relational data in parallel
+      fetchReservations();
+      fetchGuests();
+
+      // Dependent functions run once data is (mostly) ready
+      populateRoomTypeDropdown();
+      fetchActiveGuestsAndRooms();
     }
 
     // --- General Tab Switching & Initialization Logic ---
@@ -566,24 +933,19 @@
       function switchTab(panelId) {
         tabPanels.forEach(panel => panel.classList.remove('active'));
         tabButtons.forEach(button => {
-          button.classList.remove('active-tab-btn', 'bg-green-100', 'text-green-700');
-          button.classList.add('text-gray-600', 'hover:bg-gray-200');
+          // Reset non-active button styles
+          button.classList.remove('active-tab-btn', 'bg-indigo-600', 'text-white', 'font-bold', 'shadow-md');
+          button.classList.add('text-gray-700', 'bg-gray-100', 'hover:bg-indigo-100', 'hover:text-indigo-600', 'font-medium');
         });
 
         document.getElementById(panelId).classList.add('active');
         const activeButton = document.querySelector(`.tab-button[data-panel="${panelId}"]`);
-        activeButton.classList.remove('text-gray-600', 'hover:bg-gray-200');
-        activeButton.classList.add('active-tab-btn', 'bg-green-100', 'text-green-700');
+        // Apply active button styles
+        activeButton.classList.remove('text-gray-700', 'bg-gray-100', 'hover:bg-indigo-100', 'hover:text-indigo-600', 'font-medium');
+        activeButton.classList.add('active-tab-btn', 'bg-indigo-600', 'text-white', 'font-bold', 'shadow-md');
 
         // Load data specific to the tab when activated
-        if (panelId === 'guest-booking') {
-          fetchGuests();
-          populateReservationForm();
-        } else if (panelId === 'room-view') {
-          fetchRooms();
-        } else if (panelId === 'billing-checkout') {
-          fetchOccupiedRooms();
-        }
+        refreshAllData();
       }
 
       // Initial setup: Load the Room Status tab first

@@ -975,6 +975,41 @@ def get_room(room_number):
         if connection:
             connection.close()
 
+@app.route('/api/rooms-details', methods=['GET'])
+def get_all_rooms_with_details():
+    """
+    Retrieves all room records joined with RoomType to provide the name 
+    and base price for the dashboard and booking forms.
+    """
+    connection = None
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed.'}), 500
+
+        with connection.cursor() as cursor:
+            # New query to join ROOM and ROOM_TYPE
+            sql = """
+            SELECT
+                R.roomNumber, R.roomTypeID, R.floorNumber, R.currentStatus,
+                RT.typeName AS roomType, RT.basePrice
+            FROM ROOM R
+            JOIN ROOM_TYPE RT ON R.roomTypeID = RT.roomTypeID
+            """
+            cursor.execute(sql)
+            rooms = cursor.fetchall()
+
+        return jsonify(rooms), 200
+
+    except pymysql.MySQLError as e:
+        print(f"MySQL Error: {e}")
+        return jsonify({'error': 'Database error', 'details': str(e)}), 500
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return jsonify({'error': 'An unexpected error occurred.', 'details': str(e)}), 500
+    finally:
+        if connection:
+            connection.close()
 
 @app.route('/api/rooms/<room_number>', methods=['PUT'])
 def update_room(room_number):
@@ -1046,6 +1081,52 @@ def delete_room(room_number):
 
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
+        return jsonify({'error': 'Database error', 'details': str(e)}), 500
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return jsonify({'error': 'An unexpected error occurred.', 'details': str(e)}), 500
+    finally:
+        if connection:
+            connection.close()
+
+
+@app.route('/api/rooms/available', methods=['GET'])
+def get_available_rooms_by_type():
+    """
+    Retrieves available room numbers based on a provided roomTypeID.
+    This endpoint joins the ROOM and ROOM_TYPE tables.
+    Expected URL: /api/rooms/available?roomTypeId=<id>
+    """
+    # Use request.args.get() to safely read URL parameters
+    room_type_id = request.args.get('roomTypeId')
+    if not room_type_id:
+        return jsonify({'error': 'Missing roomTypeId parameter.'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed.'}), 500
+
+        # Use DictCursor for a clean JSON output (key-value pairs)
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            sql = """
+            SELECT
+                R.roomNumber
+            FROM
+                ROOM R
+            JOIN
+                ROOM_TYPE RT ON R.roomTypeID = RT.roomTypeID
+            WHERE
+                R.roomTypeID = %s AND R.currentStatus = 'Available'
+            """
+            cursor.execute(sql, (room_type_id,))
+            available_rooms = cursor.fetchall()
+
+        return jsonify(available_rooms), 200
+
+    except pymysql.MySQLError as e:
+        print(f"MySQL Error in available rooms query: {e}")
         return jsonify({'error': 'Database error', 'details': str(e)}), 500
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
