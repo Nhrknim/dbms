@@ -110,8 +110,9 @@ def add_guest():
         first_name = guest_data.get('firstName')
         last_name = guest_data.get('lastName')
         email = guest_data.get('email')
-        # --- FIX APPLIED HERE ---
-        # Convert empty strings from form fields to None, allowing NULL database columns to work.
+        id_proof = guest_data.get('idProof')
+
+        # --- FIX: Convert empty strings to None for optional database fields ---
         phone_number = guest_data.get('phoneNumber')
         if phone_number == "":
             phone_number = None
@@ -119,9 +120,7 @@ def add_guest():
         address = guest_data.get('address')
         if address == "":
             address = None
-        # ------------------------
-
-        id_proof = guest_data.get('idProof')
+        # ---------------------------------------------------------------------
 
         if not all([first_name, last_name, email, id_proof]):
             return jsonify({'error': 'Missing required fields: firstName, lastName, email, idProof'}), 400
@@ -136,7 +135,6 @@ def add_guest():
             VALUES (%s, %s, %s, %s, %s, %s)
             """
             cursor.execute(sql, (first_name, last_name, email,
-                                 # 'address' and 'phoneNumber' are now correctly None or a value
                                  phone_number, address, id_proof))
             connection.commit()
 
@@ -516,11 +514,33 @@ def add_reservation():
         room_number = reservation_data.get('roomNumber')
         check_in_date = reservation_data.get('checkInDate')
         check_out_date = reservation_data.get('checkOutDate')
-        booking_date = reservation_data.get('bookingDate')
-        num_adults = reservation_data.get('numberOfAdults')
-        num_children = reservation_data.get('numberOfChildren')
-        status = reservation_data.get('reservationStatus')
-        price_per_night = reservation_data.get('pricePerNight')
+
+        # --- FIX: Ensure numeric fields are correctly cast and defaults are handled ---
+        # Use int() and float() only if the value exists and is not empty. Default to None or 0.
+
+        # Mandatory fields from JS form, ensure they are cast to integers
+        # The form should prevent empty inputs, but casting safely prevents Python errors.
+        num_adults = int(reservation_data.get('numberOfAdults') or 1)
+
+        # Optional field (if left blank, it should be 0 or None)
+        num_children_val = reservation_data.get('numberOfChildren')
+        num_children = int(num_children_val) if (
+            num_children_val is not None and num_children_val != "") else 0
+
+        # Mandatory price, ensure it's cast to float
+        price_per_night_val = reservation_data.get('pricePerNight')
+        # If price is missing or bad, this will still throw an error, but handles empty string.
+        price_per_night = float(price_per_night_val) if (
+            price_per_night_val is not None and price_per_night_val != "") else 0.0
+
+        # Date fields: ensure they are None if empty string is passed (for nullable columns)
+        booking_date_val = reservation_data.get('bookingDate')
+        booking_date = booking_date_val if booking_date_val else None
+
+        status_val = reservation_data.get('reservationStatus')
+        # Default to 'Pending' if not provided
+        status = status_val if status_val else "Pending"
+        # -----------------------------------------------------------------------------------
 
         if not all([guest_id, room_number, check_in_date, check_out_date]):
             return jsonify({'error': 'Missing required fields'}), 400
@@ -550,8 +570,13 @@ def add_reservation():
         }), 201
 
     except pymysql.MySQLError as e:
+        # Crucial Debug Step: This will now print the exact MySQL error to your console
         print(f"MySQL Error: {e}")
         return jsonify({'error': 'Database error', 'details': str(e)}), 500
+    except ValueError as e:
+        # Catches Python errors from bad casts (e.g., trying to int('abc'))
+        print(f"Data conversion error: {e}")
+        return jsonify({'error': 'Data validation failed', 'details': str(e)}), 400
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         return jsonify({'error': 'An unexpected error occurred.', 'details': str(e)}), 500
