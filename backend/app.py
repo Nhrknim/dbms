@@ -309,13 +309,22 @@ def add_staff():
         first_name = staff_data.get('firstName')
         last_name = staff_data.get('lastName')
         email = staff_data.get('email')
-        phone_number = staff_data.get('phoneNumber')
+
+        # --- FIX: Convert empty strings to None for optional fields ---
+        phone_number = staff_data.get(
+            'phoneNumber') if staff_data.get('phoneNumber') else None
         username = staff_data.get('username')
         password = staff_data.get('password')
         role = staff_data.get('role')
-        address = staff_data.get('address')
-        date_of_hire = staff_data.get('dateOfHire')
-        salary = staff_data.get('salary')
+        address = staff_data.get(
+            'address') if staff_data.get('address') else None
+        date_of_hire = staff_data.get(
+            'dateOfHire') if staff_data.get('dateOfHire') else None
+
+        # Ensure salary is None if empty, then safely cast to float if present
+        salary_val = staff_data.get('salary')
+        salary = float(salary_val) if salary_val else None
+        # -------------------------------------------------------------
 
         if not all([first_name, last_name, email, username, password, role]):
             return jsonify({'error': 'Missing required fields: firstName, lastName, email, username, password, role'}), 400
@@ -788,11 +797,20 @@ def add_room_type():
 
         type_name = room_type_data.get('typeName')
         description = room_type_data.get('description')
-        base_price = room_type_data.get('basePrice')
-        capacity = room_type_data.get('capacity')
+
+        # --- FIX: Safely convert numeric fields (basePrice, capacity) ---
+        base_price_val = room_type_data.get('basePrice')
+        capacity_val = room_type_data.get('capacity')
+
+        # Ensure values are converted to appropriate types, or set to None/0 if empty string,
+        # otherwise a ValueError for float/int conversion will be thrown.
+        base_price = float(base_price_val) if base_price_val else None
+        capacity = int(capacity_val) if capacity_val else None
+        # -------------------------------------------------------------
 
         if not all([type_name, description, base_price, capacity]):
-            return jsonify({'error': 'Missing required fields'}), 400
+            # This check will now correctly catch if the converted base_price or capacity is None
+            return jsonify({'error': 'Missing required fields: typeName, description, basePrice, capacity'}), 400
 
         connection = get_db_connection()
         if not connection:
@@ -813,6 +831,10 @@ def add_room_type():
             'data': room_type_data
         }), 201
 
+    except ValueError as e:
+        # Catches Python errors from bad casts (e.g., trying to float('abc'))
+        print(f"Data conversion error: {e}")
+        return jsonify({'error': 'Data validation failed. Check if price/capacity are numeric.', 'details': str(e)}), 400
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
         return jsonify({'error': 'Database error', 'details': str(e)}), 500
@@ -974,8 +996,18 @@ def add_room():
             return jsonify({'error': 'Invalid JSON data provided.'}), 400
 
         room_number = room_data.get('roomNumber')
-        room_type_id = room_data.get('roomTypeID')
-        floor_number = room_data.get('floorNumber')
+
+        # --- FIX: Safely convert numeric fields (roomTypeID, floorNumber) ---
+        room_type_id_val = room_data.get('roomTypeID')
+        floor_number_val = room_data.get('floorNumber')
+
+        # Convert to integer only if the value exists, otherwise None (if allowed by schema)
+        # Based on the form (required: true for these), we assume they should be present.
+        # We try to convert them, and let the ValueError handle bad input.
+        room_type_id = int(room_type_id_val) if room_type_id_val else None
+        floor_number = int(floor_number_val) if floor_number_val else None
+        # -------------------------------------------------------------
+
         current_status = room_data.get('currentStatus')
 
         if not all([room_number, room_type_id, floor_number, current_status]):
@@ -1000,6 +1032,10 @@ def add_room():
             'data': room_data
         }), 201
 
+    except ValueError as e:
+        # Catches Python error if roomTypeID or floorNumber cannot be converted to int
+        print(f"Data conversion error: {e}")
+        return jsonify({'error': 'Data validation failed. Room Type ID and Floor Number must be valid integers.', 'details': str(e)}), 400
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
         return jsonify({'error': 'Database error', 'details': str(e)}), 500
@@ -1623,11 +1659,19 @@ def add_service():
             return jsonify({'error': 'Invalid JSON data provided.'}), 400
 
         service_name = service_data.get('serviceName')
-        description = service_data.get('description')
-        unit_price = service_data.get('unitPrice')
+
+        # --- FIX 1: Handle optional field (description) as None if empty string ---
+        description_val = service_data.get('description')
+        description = description_val if description_val else None
+
+        # --- FIX 2: Safely convert unitPrice to float, handle empty string ---
+        unit_price_val = service_data.get('unitPrice')
+        unit_price = float(unit_price_val) if unit_price_val else None
+        # -----------------------------------------------------------------------
 
         if not all([service_name, unit_price]):
-            return jsonify({'error': 'Missing required fields'}), 400
+            # This check now correctly catches if unit_price conversion failed or was missing
+            return jsonify({'error': 'Missing required fields: serviceName, unitPrice'}), 400
 
         connection = get_db_connection()
         if not connection:
@@ -1648,6 +1692,10 @@ def add_service():
             'data': service_data
         }), 201
 
+    except ValueError as e:
+        # Catches Python error if unitPrice cannot be converted to float
+        print(f"Data conversion error: {e}")
+        return jsonify({'error': 'Data validation failed. Unit Price must be a valid number.', 'details': str(e)}), 400
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
         return jsonify({'error': 'Database error', 'details': str(e)}), 500
