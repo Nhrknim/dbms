@@ -15,7 +15,7 @@ Hotel Management System is a DBMS project built for managing the daily operation
 
 ## Demo
 
-- Live Demo: `https://hotel-management-system-six-lovat.vercel.app/`
+- Live Demo: https://hotel-management-system-six-lovat.vercel.app/
 
 ## Demo Login Credentials
 
