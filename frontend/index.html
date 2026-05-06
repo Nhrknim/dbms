@@ -65,9 +65,9 @@
       console.log(`Login successful! Redirecting user role: ${role}`);
 
       // NOTE: The redirection URLs assume these files are in the same 'frontend' folder.
-      if (role === 'Admin') {
+      if (role === 'admin') {
         window.location.href = 'admin.html';
-      } else if (role === 'Receptionist') {
+      } else if (role === 'receptionist') {
         window.location.href = 'receptionist.html';
       } else {
         // Fallback for roles like 'Housekeeping' or 'Manager'

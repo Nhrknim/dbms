@@ -1,19 +1,25 @@
-import pymysql.cursors
+import os
 
 from flask import Flask, jsonify, request
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
 from flask_cors import CORS
+import psycopg
+from psycopg.rows import dict_row
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ==============================================================================
 # 1. DATABASE CONFIGURATION
 # ==============================================================================
 DB_CONFIG = {
-    'host': '127.0.0.1',
-    'user': 'hotel_manage',
-    'password': 'dbms123',
-    'database': 'hotel_db',
-    'cursorclass': pymysql.cursors.DictCursor
+    'host': os.getenv('DB_HOST', '127.0.0.1'),
+    'port': os.getenv('DB_PORT', '5432'),
+    'dbname': os.getenv('DB_NAME', 'postgres'),
+    'user': os.getenv('DB_USER', 'postgres'),
+    'password': os.getenv('DB_PASSWORD', ''),
+    'sslmode': os.getenv('DB_SSLMODE', 'require')
 }
 
 # ==============================================================================
@@ -28,13 +34,88 @@ CORS(app)
 
 
 def get_db_connection():
-    """Establishes a connection to the MySQL database."""
+    """Establishes a connection to the Supabase/PostgreSQL database."""
     try:
-        connection = pymysql.connect(**DB_CONFIG)
+        database_url = os.getenv(
+            'SUPABASE_DB_URL') or os.getenv('DATABASE_URL')
+        if database_url:
+            connection = psycopg.connect(database_url, row_factory=dict_row)
+        else:
+            connection = psycopg.connect(**DB_CONFIG, row_factory=dict_row)
         return connection
     except Exception as e:
         print(f"Error connecting to the database: {e}")
         return None
+
+
+class _PyMySQLCompat:
+    # Keeps the existing except pymysql.MySQLError blocks working after the driver swap.
+    MySQLError = psycopg.Error
+
+
+pymysql = _PyMySQLCompat()
+
+
+API_KEY_MAP = {
+    'guestid': 'guestID',
+    'staffid': 'staffID',
+    'reservationid': 'reservationID',
+    'roomtypeid': 'roomTypeID',
+    'roomnumber': 'roomNumber',
+    'billid': 'billID',
+    'paymentid': 'paymentID',
+    'serviceid': 'serviceID',
+    'billserviceid': 'billServiceID',
+    'firstname': 'firstName',
+    'lastname': 'lastName',
+    'phonenumber': 'phoneNumber',
+    'idproof': 'idProof',
+    'passwordhash': 'passwordHash',
+    'dateofhire': 'dateOfHire',
+    'checkindate': 'checkInDate',
+    'checkoutdate': 'checkOutDate',
+    'bookingdate': 'bookingDate',
+    'numberofadults': 'numberOfAdults',
+    'numberofchildren': 'numberOfChildren',
+    'reservationstatus': 'reservationStatus',
+    'pricepernight': 'pricePerNight',
+    'typename': 'typeName',
+    'baseprice': 'basePrice',
+    'floornumber': 'floorNumber',
+    'currentstatus': 'currentStatus',
+    'billdate': 'billDate',
+    'subtotal': 'subTotal',
+    'taxamount': 'taxAmount',
+    'totalamount': 'totalAmount',
+    'paymentstatus': 'paymentStatus',
+    'paymentmethod': 'paymentMethod',
+    'paymentdate': 'paymentDate',
+    'amountpaid': 'amountPaid',
+    'transactionid': 'transactionID',
+    'servicename': 'serviceName',
+    'unitprice': 'unitPrice',
+    'totalserviceprice': 'totalServicePrice',
+    'roomtype': 'roomType'
+}
+
+
+def _db_row_to_api(row):
+    if not row:
+        return row
+    return {
+        API_KEY_MAP.get(key, key): value
+        for key, value in row.items()
+    }
+
+
+def _db_rows_to_api(rows):
+    return [_db_row_to_api(row) for row in rows]
+
+
+def _db_get(row, api_key):
+    if row is None:
+        return None
+    return row.get(api_key, row.get(api_key.lower()))
 
 # ==============================================================================
 # 4. API ENDPOINT FOR LOGIN
@@ -61,19 +142,19 @@ def login():
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT staffID, username, passwordHash, role FROM Staff WHERE username = %s"
+            sql = "SELECT staffID, username, passwordHash, role FROM staff WHERE username = %s"
             cursor.execute(sql, (username,))
             staff_member = cursor.fetchone()
 
             if not staff_member:
                 return jsonify({'error': 'Invalid username or password'}), 401
 
-            if check_password_hash(staff_member['passwordHash'], password):
+            if check_password_hash(_db_get(staff_member, 'passwordHash'), password):
                 return jsonify({
                     'message': 'Login successful!',
-                    'staffID': staff_member['staffID'],
-                    'username': staff_member['username'],
-                    'role': staff_member['role']
+                    'staffID': _db_get(staff_member, 'staffID'),
+                    'username': _db_get(staff_member, 'username'),
+                    'role': _db_get(staff_member, 'role')
                 }), 200
             else:
                 return jsonify({'error': 'Invalid username or password'}), 401
@@ -131,14 +212,14 @@ def add_guest():
 
         with connection.cursor() as cursor:
             sql = """
-            INSERT INTO GUEST (firstName, lastName, email, phoneNumber, address, idProof)
+            INSERT INTO guests (firstName, lastName, email, phoneNumber, address, idProof)
             VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING guestID
             """
             cursor.execute(sql, (first_name, last_name, email,
                                  phone_number, address, id_proof))
+            new_guest_id = _db_get(cursor.fetchone(), 'guestID')
             connection.commit()
-
-            new_guest_id = cursor.lastrowid
 
         return jsonify({
             'message': 'Guest added successfully!',
@@ -167,11 +248,11 @@ def get_all_guests():
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM GUEST"
+            sql = "SELECT * FROM guests"
             cursor.execute(sql)
             guests = cursor.fetchall()
 
-        return jsonify(guests), 200
+        return jsonify(_db_rows_to_api(guests)), 200
 
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
@@ -194,12 +275,12 @@ def get_guest(guest_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM GUEST WHERE guestID = %s"
+            sql = "SELECT * FROM guests WHERE guestID = %s"
             cursor.execute(sql, (guest_id,))
             guest = cursor.fetchone()
 
         if guest:
-            return jsonify(guest), 200
+            return jsonify(_db_row_to_api(guest)), 200
         else:
             return jsonify({'error': 'Guest not found'}), 404
 
@@ -228,7 +309,7 @@ def update_guest(guest_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT guestID FROM GUEST WHERE guestID = %s"
+            sql_check = "SELECT guestID FROM guests WHERE guestID = %s"
             cursor.execute(sql_check, (guest_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Guest not found'}), 404
@@ -243,7 +324,7 @@ def update_guest(guest_id):
                 return jsonify({'message': 'No fields to update.'}), 200
 
             values.append(guest_id)
-            sql_update = f"UPDATE GUEST SET {', '.join(fields)} WHERE guestID = %s"
+            sql_update = f"UPDATE guests SET {', '.join(fields)} WHERE guestID = %s"
 
             cursor.execute(sql_update, tuple(values))
             connection.commit()
@@ -271,12 +352,12 @@ def delete_guest(guest_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT guestID FROM GUEST WHERE guestID = %s"
+            sql_check = "SELECT guestID FROM guests WHERE guestID = %s"
             cursor.execute(sql_check, (guest_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Guest not found'}), 404
 
-            sql_delete = "DELETE FROM GUEST WHERE guestID = %s"
+            sql_delete = "DELETE FROM guests WHERE guestID = %s"
             cursor.execute(sql_delete, (guest_id,))
             connection.commit()
 
@@ -337,17 +418,18 @@ def add_staff():
 
         with connection.cursor() as cursor:
             sql = """
-            INSERT INTO STAFF (
+            INSERT INTO staff (
                 firstName, lastName, email, phoneNumber, username, passwordHash, role,
                 address, dateOfHire, salary
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING staffID
             """
             cursor.execute(sql, (
                 first_name, last_name, email, phone_number, username, password_hash, role,
                 address, date_of_hire, salary
             ))
+            new_staff_id = _db_get(cursor.fetchone(), 'staffID')
             connection.commit()
-            new_staff_id = cursor.lastrowid
 
         return jsonify({
             'message': 'Staff member added successfully!',
@@ -375,11 +457,11 @@ def get_all_staff():
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM STAFF"
+            sql = "SELECT * FROM staff"
             cursor.execute(sql)
             staff = cursor.fetchall()
 
-        return jsonify(staff), 200
+        return jsonify(_db_rows_to_api(staff)), 200
 
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
@@ -402,12 +484,12 @@ def get_staff(staff_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM STAFF WHERE staffID = %s"
+            sql = "SELECT * FROM staff WHERE staffID = %s"
             cursor.execute(sql, (staff_id,))
             staff = cursor.fetchone()
 
         if staff:
-            return jsonify(staff), 200
+            return jsonify(_db_row_to_api(staff)), 200
         else:
             return jsonify({'error': 'Staff member not found'}), 404
 
@@ -436,7 +518,7 @@ def update_staff(staff_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT staffID FROM STAFF WHERE staffID = %s"
+            sql_check = "SELECT staffID FROM staff WHERE staffID = %s"
             cursor.execute(sql_check, (staff_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Staff member not found'}), 404
@@ -456,7 +538,7 @@ def update_staff(staff_id):
                 return jsonify({'message': 'No fields to update.'}), 200
 
             values.append(staff_id)
-            sql_update = f"UPDATE STAFF SET {', '.join(fields)} WHERE staffID = %s"
+            sql_update = f"UPDATE staff SET {', '.join(fields)} WHERE staffID = %s"
 
             cursor.execute(sql_update, tuple(values))
             connection.commit()
@@ -484,12 +566,12 @@ def delete_staff(staff_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT staffID FROM STAFF WHERE staffID = %s"
+            sql_check = "SELECT staffID FROM staff WHERE staffID = %s"
             cursor.execute(sql_check, (staff_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Staff member not found'}), 404
 
-            sql_delete = "DELETE FROM STAFF WHERE staffID = %s"
+            sql_delete = "DELETE FROM staff WHERE staffID = %s"
             cursor.execute(sql_delete, (staff_id,))
             connection.commit()
 
@@ -560,17 +642,18 @@ def add_reservation():
 
         with connection.cursor() as cursor:
             sql = """
-            INSERT INTO RESERVATION (
+            INSERT INTO reservations (
                 guestID, roomNumber, checkInDate, checkOutDate, bookingDate,
                 numberOfAdults, numberOfChildren, reservationStatus, pricePerNight
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING reservationID
             """
             cursor.execute(sql, (
                 guest_id, room_number, check_in_date, check_out_date, booking_date,
                 num_adults, num_children, status, price_per_night
             ))
+            new_reservation_id = _db_get(cursor.fetchone(), 'reservationID')
             connection.commit()
-            new_reservation_id = cursor.lastrowid
 
         return jsonify({
             'message': 'Reservation added successfully!',
@@ -604,11 +687,11 @@ def get_all_reservations():
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM RESERVATION"
+            sql = "SELECT * FROM reservations"
             cursor.execute(sql)
             reservations = cursor.fetchall()
 
-        return jsonify(reservations), 200
+        return jsonify(_db_rows_to_api(reservations)), 200
 
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
@@ -631,12 +714,12 @@ def get_reservation(reservation_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM RESERVATION WHERE reservationID = %s"
+            sql = "SELECT * FROM reservations WHERE reservationID = %s"
             cursor.execute(sql, (reservation_id,))
             reservation = cursor.fetchone()
 
         if reservation:
-            return jsonify(reservation), 200
+            return jsonify(_db_row_to_api(reservation)), 200
         else:
             return jsonify({'error': 'Reservation not found'}), 404
 
@@ -665,7 +748,7 @@ def update_reservation(reservation_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT reservationID FROM RESERVATION WHERE reservationID = %s"
+            sql_check = "SELECT reservationID FROM reservations WHERE reservationID = %s"
             cursor.execute(sql_check, (reservation_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Reservation not found'}), 404
@@ -680,7 +763,7 @@ def update_reservation(reservation_id):
                 return jsonify({'message': 'No fields to update.'}), 200
 
             values.append(reservation_id)
-            sql_update = f"UPDATE RESERVATION SET {', '.join(fields)} WHERE reservationID = %s"
+            sql_update = f"UPDATE reservations SET {', '.join(fields)} WHERE reservationID = %s"
 
             cursor.execute(sql_update, tuple(values))
             connection.commit()
@@ -708,12 +791,12 @@ def delete_reservation(reservation_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT reservationID FROM RESERVATION WHERE reservationID = %s"
+            sql_check = "SELECT reservationID FROM reservations WHERE reservationID = %s"
             cursor.execute(sql_check, (reservation_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Reservation not found'}), 404
 
-            sql_delete = "DELETE FROM RESERVATION WHERE reservationID = %s"
+            sql_delete = "DELETE FROM reservations WHERE reservationID = %s"
             cursor.execute(sql_delete, (reservation_id,))
             connection.commit()
 
@@ -750,17 +833,17 @@ def update_reservation_status(reservation_id):
 
         with connection.cursor() as cursor:
             # Check query capitalization
-            sql_check = "SELECT reservationID FROM RESERVATION WHERE reservationID = %s"
+            sql_check = "SELECT reservationID FROM reservations WHERE reservationID = %s"
             cursor.execute(sql_check, (reservation_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Reservation not found'}), 404
 
             # Check update query capitalization
-            sql_update = "UPDATE RESERVATION SET reservationStatus = %s WHERE reservationID = %s"
+            sql_update = "UPDATE reservations SET reservationStatus = %s WHERE reservationID = %s"
 
             # DEBUG: Print the exact values being executed
             print(
-                f"Executing SQL: UPDATE RESERVATION SET reservationStatus = '{new_status}' WHERE reservationID = {reservation_id}")
+                f"Executing SQL: UPDATE reservations SET reservationStatus = '{new_status}' WHERE reservationID = {reservation_id}")
 
             cursor.execute(sql_update, (new_status, reservation_id))
             connection.commit()
@@ -818,12 +901,13 @@ def add_room_type():
 
         with connection.cursor() as cursor:
             sql = """
-            INSERT INTO ROOM_TYPE (typeName, description, basePrice, capacity)
+            INSERT INTO roomtypes (typeName, description, basePrice, capacity)
             VALUES (%s, %s, %s, %s)
+            RETURNING roomTypeID
             """
             cursor.execute(sql, (type_name, description, base_price, capacity))
+            new_room_type_id = _db_get(cursor.fetchone(), 'roomTypeID')
             connection.commit()
-            new_room_type_id = cursor.lastrowid
 
         return jsonify({
             'message': 'Room type added successfully!',
@@ -856,11 +940,11 @@ def get_all_room_types():
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM ROOM_TYPE"
+            sql = "SELECT * FROM roomtypes"
             cursor.execute(sql)
             room_types = cursor.fetchall()
 
-        return jsonify(room_types), 200
+        return jsonify(_db_rows_to_api(room_types)), 200
 
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
@@ -883,12 +967,12 @@ def get_room_type(room_type_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM ROOM_TYPE WHERE roomTypeID = %s"
+            sql = "SELECT * FROM roomtypes WHERE roomTypeID = %s"
             cursor.execute(sql, (room_type_id,))
             room_type = cursor.fetchone()
 
         if room_type:
-            return jsonify(room_type), 200
+            return jsonify(_db_row_to_api(room_type)), 200
         else:
             return jsonify({'error': 'Room type not found'}), 404
 
@@ -917,7 +1001,7 @@ def update_room_type(room_type_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT roomTypeID FROM ROOM_TYPE WHERE roomTypeID = %s"
+            sql_check = "SELECT roomTypeID FROM roomtypes WHERE roomTypeID = %s"
             cursor.execute(sql_check, (room_type_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Room type not found'}), 404
@@ -932,7 +1016,7 @@ def update_room_type(room_type_id):
                 return jsonify({'message': 'No fields to update.'}), 200
 
             values.append(room_type_id)
-            sql_update = f"UPDATE ROOM_TYPE SET {', '.join(fields)} WHERE roomTypeID = %s"
+            sql_update = f"UPDATE roomtypes SET {', '.join(fields)} WHERE roomTypeID = %s"
 
             cursor.execute(sql_update, tuple(values))
             connection.commit()
@@ -960,12 +1044,12 @@ def delete_room_type(room_type_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT roomTypeID FROM ROOM_TYPE WHERE roomTypeID = %s"
+            sql_check = "SELECT roomTypeID FROM roomtypes WHERE roomTypeID = %s"
             cursor.execute(sql_check, (room_type_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Room type not found'}), 404
 
-            sql_delete = "DELETE FROM ROOM_TYPE WHERE roomTypeID = %s"
+            sql_delete = "DELETE FROM roomtypes WHERE roomTypeID = %s"
             cursor.execute(sql_delete, (room_type_id,))
             connection.commit()
 
@@ -1019,7 +1103,7 @@ def add_room():
 
         with connection.cursor() as cursor:
             sql = """
-            INSERT INTO ROOM (roomNumber, roomTypeID, floorNumber, currentStatus)
+            INSERT INTO rooms (roomNumber, roomTypeID, floorNumber, currentStatus)
             VALUES (%s, %s, %s, %s)
             """
             cursor.execute(sql, (room_number, room_type_id,
@@ -1057,11 +1141,11 @@ def get_all_rooms():
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM ROOM"
+            sql = "SELECT * FROM rooms"
             cursor.execute(sql)
             rooms = cursor.fetchall()
 
-        return jsonify(rooms), 200
+        return jsonify(_db_rows_to_api(rooms)), 200
 
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
@@ -1084,12 +1168,12 @@ def get_room(room_number):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM ROOM WHERE roomNumber = %s"
+            sql = "SELECT * FROM rooms WHERE roomNumber = %s"
             cursor.execute(sql, (room_number,))
             room = cursor.fetchone()
 
         if room:
-            return jsonify(room), 200
+            return jsonify(_db_row_to_api(room)), 200
         else:
             return jsonify({'error': 'Room not found'}), 404
 
@@ -1122,13 +1206,13 @@ def get_all_rooms_with_details():
             SELECT
                 R.roomNumber, R.roomTypeID, R.floorNumber, R.currentStatus,
                 RT.typeName AS roomType, RT.basePrice
-            FROM ROOM R
-            JOIN ROOM_TYPE RT ON R.roomTypeID = RT.roomTypeID
+            FROM rooms R
+            JOIN roomtypes RT ON R.roomTypeID = RT.roomTypeID
             """
             cursor.execute(sql)
             rooms = cursor.fetchall()
 
-        return jsonify(rooms), 200
+        return jsonify(_db_rows_to_api(rooms)), 200
 
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
@@ -1155,7 +1239,7 @@ def update_room(room_number):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT roomNumber FROM ROOM WHERE roomNumber = %s"
+            sql_check = "SELECT roomNumber FROM rooms WHERE roomNumber = %s"
             cursor.execute(sql_check, (room_number,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Room not found'}), 404
@@ -1170,7 +1254,7 @@ def update_room(room_number):
                 return jsonify({'message': 'No fields to update.'}), 200
 
             values.append(room_number)
-            sql_update = f"UPDATE ROOM SET {', '.join(fields)} WHERE roomNumber = %s"
+            sql_update = f"UPDATE rooms SET {', '.join(fields)} WHERE roomNumber = %s"
 
             cursor.execute(sql_update, tuple(values))
             connection.commit()
@@ -1198,12 +1282,12 @@ def delete_room(room_number):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT roomNumber FROM ROOM WHERE roomNumber = %s"
+            sql_check = "SELECT roomNumber FROM rooms WHERE roomNumber = %s"
             cursor.execute(sql_check, (room_number,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Room not found'}), 404
 
-            sql_delete = "DELETE FROM ROOM WHERE roomNumber = %s"
+            sql_delete = "DELETE FROM rooms WHERE roomNumber = %s"
             cursor.execute(sql_delete, (room_number,))
             connection.commit()
 
@@ -1238,22 +1322,21 @@ def get_available_rooms_by_type():
         if not connection:
             return jsonify({'error': 'Database connection failed.'}), 500
 
-        # Use DictCursor for a clean JSON output (key-value pairs)
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        with connection.cursor() as cursor:
             sql = """
             SELECT
                 R.roomNumber
             FROM
-                ROOM R
+                rooms R
             JOIN
-                ROOM_TYPE RT ON R.roomTypeID = RT.roomTypeID
+                roomtypes RT ON R.roomTypeID = RT.roomTypeID
             WHERE
                 R.roomTypeID = %s AND R.currentStatus = 'Available'
             """
             cursor.execute(sql, (room_type_id,))
             available_rooms = cursor.fetchall()
 
-        return jsonify(available_rooms), 200
+        return jsonify(_db_rows_to_api(available_rooms)), 200
 
     except pymysql.MySQLError as e:
         print(f"MySQL Error in available rooms query: {e}")
@@ -1295,13 +1378,14 @@ def add_billing():
 
         with connection.cursor() as cursor:
             sql = """
-            INSERT INTO BILLING (reservationID, billDate, subTotal, taxAmount, totalAmount, paymentStatus)
+            INSERT INTO billing (reservationID, billDate, subTotal, taxAmount, totalAmount, paymentStatus)
             VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING billID
             """
             cursor.execute(sql, (reservation_id, bill_date,
                                  sub_total, tax_amount, total_amount, payment_status))
+            new_bill_id = _db_get(cursor.fetchone(), 'billID')
             connection.commit()
-            new_bill_id = cursor.lastrowid
 
         return jsonify({
             'message': 'Bill added successfully!',
@@ -1330,11 +1414,11 @@ def get_all_billing():
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM BILLING"
+            sql = "SELECT * FROM billing"
             cursor.execute(sql)
             billing_records = cursor.fetchall()
 
-        return jsonify(billing_records), 200
+        return jsonify(_db_rows_to_api(billing_records)), 200
 
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
@@ -1357,12 +1441,12 @@ def get_billing(bill_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM BILLING WHERE billID = %s"
+            sql = "SELECT * FROM billing WHERE billID = %s"
             cursor.execute(sql, (bill_id,))
             billing_record = cursor.fetchone()
 
         if billing_record:
-            return jsonify(billing_record), 200
+            return jsonify(_db_row_to_api(billing_record)), 200
         else:
             return jsonify({'error': 'Bill not found'}), 404
 
@@ -1391,7 +1475,7 @@ def update_billing(bill_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT billID FROM BILLING WHERE billID = %s"
+            sql_check = "SELECT billID FROM billing WHERE billID = %s"
             cursor.execute(sql_check, (bill_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Bill not found'}), 404
@@ -1406,7 +1490,7 @@ def update_billing(bill_id):
                 return jsonify({'message': 'No fields to update.'}), 200
 
             values.append(bill_id)
-            sql_update = f"UPDATE BILLING SET {', '.join(fields)} WHERE billID = %s"
+            sql_update = f"UPDATE billing SET {', '.join(fields)} WHERE billID = %s"
 
             cursor.execute(sql_update, tuple(values))
             connection.commit()
@@ -1434,12 +1518,12 @@ def delete_billing(bill_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT billID FROM BILLING WHERE billID = %s"
+            sql_check = "SELECT billID FROM billing WHERE billID = %s"
             cursor.execute(sql_check, (bill_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Bill not found'}), 404
 
-            sql_delete = "DELETE FROM BILLING WHERE billID = %s"
+            sql_delete = "DELETE FROM billing WHERE billID = %s"
             cursor.execute(sql_delete, (bill_id,))
             connection.commit()
 
@@ -1484,13 +1568,14 @@ def add_payment():
 
         with connection.cursor() as cursor:
             sql = """
-            INSERT INTO PAYMENT (billID, paymentMethod, paymentDate, amountPaid, transactionID)
+            INSERT INTO payments (billID, paymentMethod, paymentDate, amountPaid, transactionID)
             VALUES (%s, %s, %s, %s, %s)
+            RETURNING paymentID
             """
             cursor.execute(sql, (bill_id, payment_method,
                                  payment_date, amount_paid, transaction_id))
+            new_payment_id = _db_get(cursor.fetchone(), 'paymentID')
             connection.commit()
-            new_payment_id = cursor.lastrowid
 
         return jsonify({
             'message': 'Payment added successfully!',
@@ -1519,11 +1604,11 @@ def get_all_payments():
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM PAYMENT"
+            sql = "SELECT * FROM payments"
             cursor.execute(sql)
             payments = cursor.fetchall()
 
-        return jsonify(payments), 200
+        return jsonify(_db_rows_to_api(payments)), 200
 
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
@@ -1546,12 +1631,12 @@ def get_payment(payment_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM PAYMENT WHERE paymentID = %s"
+            sql = "SELECT * FROM payments WHERE paymentID = %s"
             cursor.execute(sql, (payment_id,))
             payment = cursor.fetchone()
 
         if payment:
-            return jsonify(payment), 200
+            return jsonify(_db_row_to_api(payment)), 200
         else:
             return jsonify({'error': 'Payment not found'}), 404
 
@@ -1580,7 +1665,7 @@ def update_payment(payment_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT paymentID FROM PAYMENT WHERE paymentID = %s"
+            sql_check = "SELECT paymentID FROM payments WHERE paymentID = %s"
             cursor.execute(sql_check, (payment_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Payment not found'}), 404
@@ -1595,7 +1680,7 @@ def update_payment(payment_id):
                 return jsonify({'message': 'No fields to update.'}), 200
 
             values.append(payment_id)
-            sql_update = f"UPDATE PAYMENT SET {', '.join(fields)} WHERE paymentID = %s"
+            sql_update = f"UPDATE payments SET {', '.join(fields)} WHERE paymentID = %s"
 
             cursor.execute(sql_update, tuple(values))
             connection.commit()
@@ -1623,12 +1708,12 @@ def delete_payment(payment_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT paymentID FROM PAYMENT WHERE paymentID = %s"
+            sql_check = "SELECT paymentID FROM payments WHERE paymentID = %s"
             cursor.execute(sql_check, (payment_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Payment not found'}), 404
 
-            sql_delete = "DELETE FROM PAYMENT WHERE paymentID = %s"
+            sql_delete = "DELETE FROM payments WHERE paymentID = %s"
             cursor.execute(sql_delete, (payment_id,))
             connection.commit()
 
@@ -1679,12 +1764,13 @@ def add_service():
 
         with connection.cursor() as cursor:
             sql = """
-            INSERT INTO SERVICE (serviceName, description, unitPrice)
+            INSERT INTO services (serviceName, description, unitPrice)
             VALUES (%s, %s, %s)
+            RETURNING serviceID
             """
             cursor.execute(sql, (service_name, description, unit_price))
+            new_service_id = _db_get(cursor.fetchone(), 'serviceID')
             connection.commit()
-            new_service_id = cursor.lastrowid
 
         return jsonify({
             'message': 'Service added successfully!',
@@ -1717,11 +1803,11 @@ def get_all_services():
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM SERVICE"
+            sql = "SELECT * FROM services"
             cursor.execute(sql)
             services = cursor.fetchall()
 
-        return jsonify(services), 200
+        return jsonify(_db_rows_to_api(services)), 200
 
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
@@ -1744,12 +1830,12 @@ def get_service(service_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM SERVICE WHERE serviceID = %s"
+            sql = "SELECT * FROM services WHERE serviceID = %s"
             cursor.execute(sql, (service_id,))
             service = cursor.fetchone()
 
         if service:
-            return jsonify(service), 200
+            return jsonify(_db_row_to_api(service)), 200
         else:
             return jsonify({'error': 'Service not found'}), 404
 
@@ -1778,7 +1864,7 @@ def update_service(service_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT serviceID FROM SERVICE WHERE serviceID = %s"
+            sql_check = "SELECT serviceID FROM services WHERE serviceID = %s"
             cursor.execute(sql_check, (service_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Service not found'}), 404
@@ -1793,7 +1879,7 @@ def update_service(service_id):
                 return jsonify({'message': 'No fields to update.'}), 200
 
             values.append(service_id)
-            sql_update = f"UPDATE SERVICE SET {', '.join(fields)} WHERE serviceID = %s"
+            sql_update = f"UPDATE services SET {', '.join(fields)} WHERE serviceID = %s"
 
             cursor.execute(sql_update, tuple(values))
             connection.commit()
@@ -1821,12 +1907,12 @@ def delete_service(service_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT serviceID FROM SERVICE WHERE serviceID = %s"
+            sql_check = "SELECT serviceID FROM services WHERE serviceID = %s"
             cursor.execute(sql_check, (service_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Service not found'}), 404
 
-            sql_delete = "DELETE FROM SERVICE WHERE serviceID = %s"
+            sql_delete = "DELETE FROM services WHERE serviceID = %s"
             cursor.execute(sql_delete, (service_id,))
             connection.commit()
 
@@ -1870,13 +1956,14 @@ def add_bill_service():
 
         with connection.cursor() as cursor:
             sql = """
-            INSERT INTO BILL_SERVICE (billID, serviceID, quantity, totalServicePrice)
+            INSERT INTO billservices (billID, serviceID, quantity, totalServicePrice)
             VALUES (%s, %s, %s, %s)
+            RETURNING billServiceID
             """
             cursor.execute(sql, (bill_id, service_id,
                                  quantity, total_service_price))
+            new_bill_service_id = _db_get(cursor.fetchone(), 'billServiceID')
             connection.commit()
-            new_bill_service_id = cursor.lastrowid
 
         return jsonify({
             'message': 'Bill service added successfully!',
@@ -1905,11 +1992,11 @@ def get_all_bill_services():
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM BILL_SERVICE"
+            sql = "SELECT * FROM billservices"
             cursor.execute(sql)
             bill_services = cursor.fetchall()
 
-        return jsonify(bill_services), 200
+        return jsonify(_db_rows_to_api(bill_services)), 200
 
     except pymysql.MySQLError as e:
         print(f"MySQL Error: {e}")
@@ -1932,12 +2019,12 @@ def get_bill_service(bill_service_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM BILL_SERVICE WHERE billServiceID = %s"
+            sql = "SELECT * FROM billservices WHERE billServiceID = %s"
             cursor.execute(sql, (bill_service_id,))
             bill_service = cursor.fetchone()
 
         if bill_service:
-            return jsonify(bill_service), 200
+            return jsonify(_db_row_to_api(bill_service)), 200
         else:
             return jsonify({'error': 'Bill service record not found'}), 404
 
@@ -1966,7 +2053,7 @@ def update_bill_service(bill_service_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT billServiceID FROM BILL_SERVICE WHERE billServiceID = %s"
+            sql_check = "SELECT billServiceID FROM billservices WHERE billServiceID = %s"
             cursor.execute(sql_check, (bill_service_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Bill service record not found'}), 404
@@ -1981,7 +2068,7 @@ def update_bill_service(bill_service_id):
                 return jsonify({'message': 'No fields to update.'}), 200
 
             values.append(bill_service_id)
-            sql_update = f"UPDATE BILL_SERVICE SET {', '.join(fields)} WHERE billServiceID = %s"
+            sql_update = f"UPDATE billservices SET {', '.join(fields)} WHERE billServiceID = %s"
 
             cursor.execute(sql_update, tuple(values))
             connection.commit()
@@ -2009,12 +2096,12 @@ def delete_bill_service(bill_service_id):
             return jsonify({'error': 'Database connection failed.'}), 500
 
         with connection.cursor() as cursor:
-            sql_check = "SELECT billServiceID FROM BILL_SERVICE WHERE billServiceID = %s"
+            sql_check = "SELECT billServiceID FROM billservices WHERE billServiceID = %s"
             cursor.execute(sql_check, (bill_service_id,))
             if not cursor.fetchone():
                 return jsonify({'error': 'Bill service record not found'}), 404
 
-            sql_delete = "DELETE FROM BILL_SERVICE WHERE billServiceID = %s"
+            sql_delete = "DELETE FROM billservices WHERE billServiceID = %s"
             cursor.execute(sql_delete, (bill_service_id,))
             connection.commit()
 
